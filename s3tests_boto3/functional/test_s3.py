@@ -1,3 +1,4 @@
+import allure
 import boto3
 import botocore.session
 from botocore.exceptions import ClientError
@@ -82,7 +83,7 @@ from . import (
     nuke_prefixed_buckets,
     configured_storage_classes,
     get_lc_debug_interval,
-    )
+)
 
 
 def _bucket_is_empty(bucket):
@@ -92,10 +93,12 @@ def _bucket_is_empty(bucket):
         break
     return is_empty
 
+
 def test_bucket_list_empty():
     bucket = get_new_bucket_resource()
     is_empty = _bucket_is_empty(bucket)
     assert is_empty == True
+
 
 @pytest.mark.list_objects_v2
 def test_bucket_list_distinct():
@@ -104,6 +107,7 @@ def test_bucket_list_distinct():
     obj = bucket1.put_object(Body='str', Key='asdf')
     is_empty = _bucket_is_empty(bucket2)
     assert is_empty == True
+
 
 def _create_objects(bucket=None, bucket_name=None, keys=[]):
     """
@@ -120,6 +124,7 @@ def _create_objects(bucket=None, bucket_name=None, keys=[]):
 
     return bucket_name
 
+
 def _get_keys(response):
     """
     return lists of strings that are the keys from a client.list_objects() response
@@ -130,6 +135,7 @@ def _get_keys(response):
         keys = [obj['Key'] for obj in objects_list]
     return keys
 
+
 def _get_prefixes(response):
     """
     return lists of strings that are prefixes from a client.list_objects() response
@@ -139,6 +145,7 @@ def _get_prefixes(response):
         prefix_list = response['CommonPrefixes']
         prefixes = [prefix['Prefix'] for prefix in prefix_list]
     return prefixes
+
 
 @pytest.mark.fails_on_dbstore
 def test_bucket_list_many():
@@ -151,11 +158,12 @@ def test_bucket_list_many():
     assert keys == ['bar', 'baz']
     assert response['IsTruncated'] == True
 
-    response = client.list_objects(Bucket=bucket_name, Marker='baz',MaxKeys=2)
+    response = client.list_objects(Bucket=bucket_name, Marker='baz', MaxKeys=2)
     keys = _get_keys(response)
     assert len(keys) == 1
     assert response['IsTruncated'] == False
     assert keys == ['foo']
+
 
 @pytest.mark.list_objects_v2
 @pytest.mark.fails_on_dbstore
@@ -169,11 +177,12 @@ def test_bucket_listv2_many():
     assert keys == ['bar', 'baz']
     assert response['IsTruncated'] == True
 
-    response = client.list_objects_v2(Bucket=bucket_name, StartAfter='baz',MaxKeys=2)
+    response = client.list_objects_v2(Bucket=bucket_name, StartAfter='baz', MaxKeys=2)
     keys = _get_keys(response)
     assert len(keys) == 1
     assert response['IsTruncated'] == False
     assert keys == ['foo']
+
 
 @pytest.mark.list_objects_v2
 def test_basic_key_count():
@@ -182,9 +191,10 @@ def test_basic_key_count():
     bucket_name = get_new_bucket_name()
     client.create_bucket(Bucket=bucket_name)
     for j in range(5):
-            client.put_object(Bucket=bucket_name, Key=str(j))
+        client.put_object(Bucket=bucket_name, Key=str(j))
     response1 = client.list_objects_v2(Bucket=bucket_name)
     assert response1['KeyCount'] == 5
+
 
 def test_bucket_list_delimiter_basic():
     bucket_name = _create_objects(keys=['foo/bar', 'foo/bar/xyzzy', 'quux/thud', 'asdf'])
@@ -198,6 +208,7 @@ def test_bucket_list_delimiter_basic():
     prefixes = _get_prefixes(response)
     assert len(prefixes) == 2
     assert prefixes == ['foo/', 'quux/']
+
 
 @pytest.mark.list_objects_v2
 def test_bucket_listv2_delimiter_basic():
@@ -229,6 +240,7 @@ def test_bucket_listv2_encoding_basic():
     assert len(prefixes) == 3
     assert prefixes == ['foo%2B1/', 'foo/', 'quux%20ab/']
 
+
 def test_bucket_list_encoding_basic():
     bucket_name = _create_objects(keys=['foo+1/bar', 'foo/bar/xyzzy', 'quux ab/thud', 'asdf+b'])
     client = get_client()
@@ -247,7 +259,8 @@ def validate_bucket_list(bucket_name, prefix, delimiter, marker, max_keys,
                          is_truncated, check_objs, check_prefixes, next_marker):
     client = get_client()
 
-    response = client.list_objects(Bucket=bucket_name, Delimiter=delimiter, Marker=marker, MaxKeys=max_keys, Prefix=prefix)
+    response = client.list_objects(Bucket=bucket_name, Delimiter=delimiter, Marker=marker, MaxKeys=max_keys,
+                                   Prefix=prefix)
     assert response['IsTruncated'] == is_truncated
     if 'NextMarker' not in response:
         response['NextMarker'] = None
@@ -263,8 +276,9 @@ def validate_bucket_list(bucket_name, prefix, delimiter, marker, max_keys,
 
     return response['NextMarker']
 
+
 def validate_bucket_listv2(bucket_name, prefix, delimiter, continuation_token, max_keys,
-                         is_truncated, check_objs, check_prefixes, last=False):
+                           is_truncated, check_objs, check_prefixes, last=False):
     client = get_client()
 
     params = dict(Bucket=bucket_name, Delimiter=delimiter, MaxKeys=max_keys, Prefix=prefix)
@@ -279,7 +293,6 @@ def validate_bucket_listv2(bucket_name, prefix, delimiter, continuation_token, m
     if last:
         assert response['NextContinuationToken'] == None
 
-
     keys = _get_keys(response)
     prefixes = _get_prefixes(response)
 
@@ -289,6 +302,7 @@ def validate_bucket_listv2(bucket_name, prefix, delimiter, continuation_token, m
     assert prefixes == check_prefixes
 
     return response['NextContinuationToken']
+
 
 @pytest.mark.fails_on_dbstore
 def test_bucket_list_delimiter_prefix():
@@ -312,6 +326,7 @@ def test_bucket_list_delimiter_prefix():
 
     marker = validate_bucket_list(bucket_name, prefix, delim, '', 2, False, ['boo/bar'], ['boo/baz/'], None)
 
+
 @pytest.mark.list_objects_v2
 @pytest.mark.fails_on_dbstore
 def test_bucket_listv2_delimiter_prefix():
@@ -323,17 +338,21 @@ def test_bucket_listv2_delimiter_prefix():
 
     continuation_token = validate_bucket_listv2(bucket_name, prefix, delim, None, 1, True, ['asdf'], [])
     continuation_token = validate_bucket_listv2(bucket_name, prefix, delim, continuation_token, 1, True, [], ['boo/'])
-    continuation_token = validate_bucket_listv2(bucket_name, prefix, delim, continuation_token, 1, False, [], ['cquux/'], last=True)
+    continuation_token = validate_bucket_listv2(bucket_name, prefix, delim, continuation_token, 1, False, [],
+                                                ['cquux/'], last=True)
 
     continuation_token = validate_bucket_listv2(bucket_name, prefix, delim, None, 2, True, ['asdf'], ['boo/'])
-    continuation_token = validate_bucket_listv2(bucket_name, prefix, delim, continuation_token, 2, False, [], ['cquux/'], last=True)
+    continuation_token = validate_bucket_listv2(bucket_name, prefix, delim, continuation_token, 2, False, [],
+                                                ['cquux/'], last=True)
 
     prefix = 'boo/'
 
     continuation_token = validate_bucket_listv2(bucket_name, prefix, delim, None, 1, True, ['boo/bar'], [])
-    continuation_token = validate_bucket_listv2(bucket_name, prefix, delim, continuation_token, 1, False, [], ['boo/baz/'], last=True)
+    continuation_token = validate_bucket_listv2(bucket_name, prefix, delim, continuation_token, 1, False, [],
+                                                ['boo/baz/'], last=True)
 
-    continuation_token = validate_bucket_listv2(bucket_name, prefix, delim, None, 2, False, ['boo/bar'], ['boo/baz/'], last=True)
+    continuation_token = validate_bucket_listv2(bucket_name, prefix, delim, None, 2, False, ['boo/bar'], ['boo/baz/'],
+                                                last=True)
 
 
 @pytest.mark.list_objects_v2
@@ -341,9 +360,11 @@ def test_bucket_listv2_delimiter_prefix_ends_with_delimiter():
     bucket_name = _create_objects(keys=['asdf/'])
     validate_bucket_listv2(bucket_name, 'asdf/', '/', None, 1000, False, ['asdf/'], [], last=True)
 
+
 def test_bucket_list_delimiter_prefix_ends_with_delimiter():
     bucket_name = _create_objects(keys=['asdf/'])
     validate_bucket_list(bucket_name, 'asdf/', '/', '', 1000, False, ['asdf/'], [], None)
+
 
 def test_bucket_list_delimiter_alt():
     bucket_name = _create_objects(keys=['bar', 'baz', 'cab', 'foo'])
@@ -360,6 +381,7 @@ def test_bucket_list_delimiter_alt():
     prefixes = _get_prefixes(response)
     assert len(prefixes) == 2
     assert prefixes == ['ba', 'ca']
+
 
 @pytest.mark.list_objects_v2
 def test_bucket_listv2_delimiter_alt():
@@ -378,9 +400,10 @@ def test_bucket_listv2_delimiter_alt():
     assert len(prefixes) == 2
     assert prefixes == ['ba', 'ca']
 
+
 @pytest.mark.fails_on_dbstore
 def test_bucket_list_delimiter_prefix_underscore():
-    bucket_name = _create_objects(keys=['_obj1_','_under1/bar', '_under1/baz/xyzzy', '_under2/thud', '_under2/bla'])
+    bucket_name = _create_objects(keys=['_obj1_', '_under1/bar', '_under1/baz/xyzzy', '_under2/thud', '_under2/bla'])
 
     delim = '/'
     marker = ''
@@ -399,27 +422,33 @@ def test_bucket_list_delimiter_prefix_underscore():
 
     marker = validate_bucket_list(bucket_name, prefix, delim, '', 2, False, ['_under1/bar'], ['_under1/baz/'], None)
 
+
 @pytest.mark.list_objects_v2
 @pytest.mark.fails_on_dbstore
 def test_bucket_listv2_delimiter_prefix_underscore():
-    bucket_name = _create_objects(keys=['_obj1_','_under1/bar', '_under1/baz/xyzzy', '_under2/thud', '_under2/bla'])
+    bucket_name = _create_objects(keys=['_obj1_', '_under1/bar', '_under1/baz/xyzzy', '_under2/thud', '_under2/bla'])
 
     delim = '/'
     continuation_token = ''
     prefix = ''
-    continuation_token  = validate_bucket_listv2(bucket_name, prefix, delim, None, 1, True, ['_obj1_'], [])
-    continuation_token  = validate_bucket_listv2(bucket_name, prefix, delim, continuation_token , 1, True, [], ['_under1/'])
-    continuation_token  = validate_bucket_listv2(bucket_name, prefix, delim, continuation_token , 1, False, [], ['_under2/'], last=True)
+    continuation_token = validate_bucket_listv2(bucket_name, prefix, delim, None, 1, True, ['_obj1_'], [])
+    continuation_token = validate_bucket_listv2(bucket_name, prefix, delim, continuation_token, 1, True, [],
+                                                ['_under1/'])
+    continuation_token = validate_bucket_listv2(bucket_name, prefix, delim, continuation_token, 1, False, [],
+                                                ['_under2/'], last=True)
 
-    continuation_token  = validate_bucket_listv2(bucket_name, prefix, delim, None, 2, True, ['_obj1_'], ['_under1/'])
-    continuation_token  = validate_bucket_listv2(bucket_name, prefix, delim, continuation_token , 2, False, [], ['_under2/'], last=True)
+    continuation_token = validate_bucket_listv2(bucket_name, prefix, delim, None, 2, True, ['_obj1_'], ['_under1/'])
+    continuation_token = validate_bucket_listv2(bucket_name, prefix, delim, continuation_token, 2, False, [],
+                                                ['_under2/'], last=True)
 
     prefix = '_under1/'
 
-    continuation_token  = validate_bucket_listv2(bucket_name, prefix, delim, None, 1, True, ['_under1/bar'], [])
-    continuation_token  = validate_bucket_listv2(bucket_name, prefix, delim, continuation_token , 1, False, [], ['_under1/baz/'], last=True)
+    continuation_token = validate_bucket_listv2(bucket_name, prefix, delim, None, 1, True, ['_under1/bar'], [])
+    continuation_token = validate_bucket_listv2(bucket_name, prefix, delim, continuation_token, 1, False, [],
+                                                ['_under1/baz/'], last=True)
 
-    continuation_token  = validate_bucket_listv2(bucket_name, prefix, delim, None, 2, False, ['_under1/bar'], ['_under1/baz/'], last=True)
+    continuation_token = validate_bucket_listv2(bucket_name, prefix, delim, None, 2, False, ['_under1/bar'],
+                                                ['_under1/baz/'], last=True)
 
 
 def test_bucket_list_delimiter_percentage():
@@ -437,6 +466,7 @@ def test_bucket_list_delimiter_percentage():
     # bar, baz, and cab should be broken up by the 'a' delimiters
     assert prefixes == ['b%', 'c%']
 
+
 @pytest.mark.list_objects_v2
 def test_bucket_listv2_delimiter_percentage():
     bucket_name = _create_objects(keys=['b%ar', 'b%az', 'c%ab', 'foo'])
@@ -453,6 +483,7 @@ def test_bucket_listv2_delimiter_percentage():
     # bar, baz, and cab should be broken up by the 'a' delimiters
     assert prefixes == ['b%', 'c%']
 
+
 def test_bucket_list_delimiter_whitespace():
     bucket_name = _create_objects(keys=['b ar', 'b az', 'c ab', 'foo'])
     client = get_client()
@@ -467,6 +498,7 @@ def test_bucket_list_delimiter_whitespace():
     assert len(prefixes) == 2
     # bar, baz, and cab should be broken up by the 'a' delimiters
     assert prefixes == ['b ', 'c ']
+
 
 @pytest.mark.list_objects_v2
 def test_bucket_listv2_delimiter_whitespace():
@@ -484,6 +516,7 @@ def test_bucket_listv2_delimiter_whitespace():
     # bar, baz, and cab should be broken up by the 'a' delimiters
     assert prefixes == ['b ', 'c ']
 
+
 def test_bucket_list_delimiter_dot():
     bucket_name = _create_objects(keys=['b.ar', 'b.az', 'c.ab', 'foo'])
     client = get_client()
@@ -498,6 +531,7 @@ def test_bucket_list_delimiter_dot():
     assert len(prefixes) == 2
     # bar, baz, and cab should be broken up by the 'a' delimiters
     assert prefixes == ['b.', 'c.']
+
 
 @pytest.mark.list_objects_v2
 def test_bucket_listv2_delimiter_dot():
@@ -515,8 +549,9 @@ def test_bucket_listv2_delimiter_dot():
     # bar, baz, and cab should be broken up by the 'a' delimiters
     assert prefixes == ['b.', 'c.']
 
+
 def test_bucket_list_delimiter_unreadable():
-    key_names=['bar', 'baz', 'cab', 'foo']
+    key_names = ['bar', 'baz', 'cab', 'foo']
     bucket_name = _create_objects(keys=key_names)
     client = get_client()
 
@@ -528,9 +563,10 @@ def test_bucket_list_delimiter_unreadable():
     assert keys == key_names
     assert prefixes == []
 
+
 @pytest.mark.list_objects_v2
 def test_bucket_listv2_delimiter_unreadable():
-    key_names=['bar', 'baz', 'cab', 'foo']
+    key_names = ['bar', 'baz', 'cab', 'foo']
     bucket_name = _create_objects(keys=key_names)
     client = get_client()
 
@@ -541,6 +577,7 @@ def test_bucket_listv2_delimiter_unreadable():
     prefixes = _get_prefixes(response)
     assert keys == key_names
     assert prefixes == []
+
 
 def test_bucket_list_delimiter_empty():
     key_names = ['bar', 'baz', 'cab', 'foo']
@@ -555,6 +592,7 @@ def test_bucket_list_delimiter_empty():
     prefixes = _get_prefixes(response)
     assert keys == key_names
     assert prefixes == []
+
 
 @pytest.mark.list_objects_v2
 def test_bucket_listv2_delimiter_empty():
@@ -571,6 +609,7 @@ def test_bucket_listv2_delimiter_empty():
     assert keys == key_names
     assert prefixes == []
 
+
 def test_bucket_list_delimiter_none():
     key_names = ['bar', 'baz', 'cab', 'foo']
     bucket_name = _create_objects(keys=key_names)
@@ -584,6 +623,7 @@ def test_bucket_list_delimiter_none():
     prefixes = _get_prefixes(response)
     assert keys == key_names
     assert prefixes == []
+
 
 @pytest.mark.list_objects_v2
 def test_bucket_listv2_delimiter_none():
@@ -600,6 +640,7 @@ def test_bucket_listv2_delimiter_none():
     assert keys == key_names
     assert prefixes == []
 
+
 @pytest.mark.list_objects_v2
 def test_bucket_listv2_fetchowner_notempty():
     key_names = ['foo/bar', 'foo/baz', 'quux']
@@ -609,6 +650,7 @@ def test_bucket_listv2_fetchowner_notempty():
     response = client.list_objects_v2(Bucket=bucket_name, FetchOwner=True)
     objs_list = response['Contents']
     assert 'Owner' in objs_list[0]
+
 
 @pytest.mark.list_objects_v2
 def test_bucket_listv2_fetchowner_defaultempty():
@@ -620,15 +662,17 @@ def test_bucket_listv2_fetchowner_defaultempty():
     objs_list = response['Contents']
     assert not 'Owner' in objs_list[0]
 
+
 @pytest.mark.list_objects_v2
 def test_bucket_listv2_fetchowner_empty():
     key_names = ['foo/bar', 'foo/baz', 'quux']
     bucket_name = _create_objects(keys=key_names)
     client = get_client()
 
-    response = client.list_objects_v2(Bucket=bucket_name, FetchOwner= False)
+    response = client.list_objects_v2(Bucket=bucket_name, FetchOwner=False)
     objs_list = response['Contents']
     assert not 'Owner' in objs_list[0]
+
 
 def test_bucket_list_delimiter_not_exist():
     key_names = ['bar', 'baz', 'cab', 'foo']
@@ -643,6 +687,7 @@ def test_bucket_list_delimiter_not_exist():
     prefixes = _get_prefixes(response)
     assert keys == key_names
     assert prefixes == []
+
 
 @pytest.mark.list_objects_v2
 def test_bucket_listv2_delimiter_not_exist():
@@ -676,6 +721,7 @@ def test_bucket_list_delimiter_not_skip_special():
     assert keys == key_names2
     assert prefixes == ['0/']
 
+
 def test_bucket_list_prefix_basic():
     key_names = ['foo/bar', 'foo/baz', 'quux']
     bucket_name = _create_objects(keys=key_names)
@@ -688,6 +734,7 @@ def test_bucket_list_prefix_basic():
     prefixes = _get_prefixes(response)
     assert keys == ['foo/bar', 'foo/baz']
     assert prefixes == []
+
 
 @pytest.mark.list_objects_v2
 def test_bucket_listv2_prefix_basic():
@@ -703,6 +750,7 @@ def test_bucket_listv2_prefix_basic():
     assert keys == ['foo/bar', 'foo/baz']
     assert prefixes == []
 
+
 # just testing that we can do the delimeter and prefix logic on non-slashes
 def test_bucket_list_prefix_alt():
     key_names = ['bar', 'baz', 'foo']
@@ -716,6 +764,7 @@ def test_bucket_list_prefix_alt():
     prefixes = _get_prefixes(response)
     assert keys == ['bar', 'baz']
     assert prefixes == []
+
 
 @pytest.mark.list_objects_v2
 def test_bucket_listv2_prefix_alt():
@@ -731,6 +780,7 @@ def test_bucket_listv2_prefix_alt():
     assert keys == ['bar', 'baz']
     assert prefixes == []
 
+
 def test_bucket_list_prefix_empty():
     key_names = ['foo/bar', 'foo/baz', 'quux']
     bucket_name = _create_objects(keys=key_names)
@@ -743,6 +793,7 @@ def test_bucket_list_prefix_empty():
     prefixes = _get_prefixes(response)
     assert keys == key_names
     assert prefixes == []
+
 
 @pytest.mark.list_objects_v2
 def test_bucket_listv2_prefix_empty():
@@ -758,6 +809,7 @@ def test_bucket_listv2_prefix_empty():
     assert keys == key_names
     assert prefixes == []
 
+
 def test_bucket_list_prefix_none():
     key_names = ['foo/bar', 'foo/baz', 'quux']
     bucket_name = _create_objects(keys=key_names)
@@ -770,6 +822,7 @@ def test_bucket_list_prefix_none():
     prefixes = _get_prefixes(response)
     assert keys == key_names
     assert prefixes == []
+
 
 @pytest.mark.list_objects_v2
 def test_bucket_listv2_prefix_none():
@@ -785,6 +838,7 @@ def test_bucket_listv2_prefix_none():
     assert keys == key_names
     assert prefixes == []
 
+
 def test_bucket_list_prefix_not_exist():
     key_names = ['foo/bar', 'foo/baz', 'quux']
     bucket_name = _create_objects(keys=key_names)
@@ -797,6 +851,7 @@ def test_bucket_list_prefix_not_exist():
     prefixes = _get_prefixes(response)
     assert keys == []
     assert prefixes == []
+
 
 @pytest.mark.list_objects_v2
 def test_bucket_listv2_prefix_not_exist():
@@ -812,6 +867,7 @@ def test_bucket_listv2_prefix_not_exist():
     assert keys == []
     assert prefixes == []
 
+
 def test_bucket_list_prefix_unreadable():
     key_names = ['foo/bar', 'foo/baz', 'quux']
     bucket_name = _create_objects(keys=key_names)
@@ -824,6 +880,7 @@ def test_bucket_list_prefix_unreadable():
     prefixes = _get_prefixes(response)
     assert keys == []
     assert prefixes == []
+
 
 @pytest.mark.list_objects_v2
 def test_bucket_listv2_prefix_unreadable():
@@ -839,6 +896,7 @@ def test_bucket_listv2_prefix_unreadable():
     assert keys == []
     assert prefixes == []
 
+
 def test_bucket_list_prefix_delimiter_basic():
     key_names = ['foo/bar', 'foo/baz/xyzzy', 'quux/thud', 'asdf']
     bucket_name = _create_objects(keys=key_names)
@@ -852,6 +910,7 @@ def test_bucket_list_prefix_delimiter_basic():
     prefixes = _get_prefixes(response)
     assert keys == ['foo/bar']
     assert prefixes == ['foo/baz/']
+
 
 @pytest.mark.list_objects_v2
 def test_bucket_listv2_prefix_delimiter_basic():
@@ -868,6 +927,7 @@ def test_bucket_listv2_prefix_delimiter_basic():
     assert keys == ['foo/bar']
     assert prefixes == ['foo/baz/']
 
+
 def test_bucket_list_prefix_delimiter_alt():
     key_names = ['bar', 'bazar', 'cab', 'foo']
     bucket_name = _create_objects(keys=key_names)
@@ -881,6 +941,7 @@ def test_bucket_list_prefix_delimiter_alt():
     prefixes = _get_prefixes(response)
     assert keys == ['bar']
     assert prefixes == ['baza']
+
 
 @pytest.mark.list_objects_v2
 def test_bucket_listv2_prefix_delimiter_alt():
@@ -897,6 +958,7 @@ def test_bucket_listv2_prefix_delimiter_alt():
     assert keys == ['bar']
     assert prefixes == ['baza']
 
+
 def test_bucket_list_prefix_delimiter_prefix_not_exist():
     key_names = ['b/a/r', 'b/a/c', 'b/a/g', 'g']
     bucket_name = _create_objects(keys=key_names)
@@ -908,6 +970,7 @@ def test_bucket_list_prefix_delimiter_prefix_not_exist():
     prefixes = _get_prefixes(response)
     assert keys == []
     assert prefixes == []
+
 
 @pytest.mark.list_objects_v2
 def test_bucket_listv2_prefix_delimiter_prefix_not_exist():
@@ -922,6 +985,7 @@ def test_bucket_listv2_prefix_delimiter_prefix_not_exist():
     assert keys == []
     assert prefixes == []
 
+
 def test_bucket_list_prefix_delimiter_delimiter_not_exist():
     key_names = ['b/a/c', 'b/a/g', 'b/a/r', 'g']
     bucket_name = _create_objects(keys=key_names)
@@ -933,6 +997,7 @@ def test_bucket_list_prefix_delimiter_delimiter_not_exist():
     prefixes = _get_prefixes(response)
     assert keys == ['b/a/c', 'b/a/g', 'b/a/r']
     assert prefixes == []
+
 
 @pytest.mark.list_objects_v2
 def test_bucket_listv2_prefix_delimiter_delimiter_not_exist():
@@ -947,6 +1012,7 @@ def test_bucket_listv2_prefix_delimiter_delimiter_not_exist():
     assert keys == ['b/a/c', 'b/a/g', 'b/a/r']
     assert prefixes == []
 
+
 def test_bucket_list_prefix_delimiter_prefix_delimiter_not_exist():
     key_names = ['b/a/c', 'b/a/g', 'b/a/r', 'g']
     bucket_name = _create_objects(keys=key_names)
@@ -958,6 +1024,7 @@ def test_bucket_list_prefix_delimiter_prefix_delimiter_not_exist():
     prefixes = _get_prefixes(response)
     assert keys == []
     assert prefixes == []
+
 
 @pytest.mark.list_objects_v2
 def test_bucket_listv2_prefix_delimiter_prefix_delimiter_not_exist():
@@ -971,6 +1038,7 @@ def test_bucket_listv2_prefix_delimiter_prefix_delimiter_not_exist():
     prefixes = _get_prefixes(response)
     assert keys == []
     assert prefixes == []
+
 
 @pytest.mark.fails_on_dbstore
 def test_bucket_list_maxkeys_one():
@@ -989,6 +1057,7 @@ def test_bucket_list_maxkeys_one():
 
     keys = _get_keys(response)
     assert keys == key_names[1:]
+
 
 @pytest.mark.list_objects_v2
 @pytest.mark.fails_on_dbstore
@@ -1009,6 +1078,7 @@ def test_bucket_listv2_maxkeys_one():
     keys = _get_keys(response)
     assert keys == key_names[1:]
 
+
 def test_bucket_list_maxkeys_zero():
     key_names = ['bar', 'baz', 'foo', 'quxx']
     bucket_name = _create_objects(keys=key_names)
@@ -1019,6 +1089,7 @@ def test_bucket_list_maxkeys_zero():
     assert response['IsTruncated'] == False
     keys = _get_keys(response)
     assert keys == []
+
 
 @pytest.mark.list_objects_v2
 def test_bucket_listv2_maxkeys_zero():
@@ -1032,6 +1103,7 @@ def test_bucket_listv2_maxkeys_zero():
     keys = _get_keys(response)
     assert keys == []
 
+
 def test_bucket_list_maxkeys_none():
     key_names = ['bar', 'baz', 'foo', 'quxx']
     bucket_name = _create_objects(keys=key_names)
@@ -1042,6 +1114,7 @@ def test_bucket_list_maxkeys_none():
     keys = _get_keys(response)
     assert keys == key_names
     assert response['MaxKeys'] == 1000
+
 
 @pytest.mark.list_objects_v2
 def test_bucket_listv2_maxkeys_none():
@@ -1055,35 +1128,40 @@ def test_bucket_listv2_maxkeys_none():
     assert keys == key_names
     assert response['MaxKeys'] == 1000
 
+
 def get_http_response_body(**kwargs):
     global http_response_body
     http_response_body = kwargs['http_response'].__dict__['_content']
 
+
 def parseXmlToJson(xml):
-  response = {}
+    response = {}
 
-  for child in list(xml):
-    if len(list(child)) > 0:
-      response[child.tag] = parseXmlToJson(child)
-    else:
-      response[child.tag] = child.text or ''
+    for child in list(xml):
+        if len(list(child)) > 0:
+            response[child.tag] = parseXmlToJson(child)
+        else:
+            response[child.tag] = child.text or ''
 
-    # one-liner equivalent
-    # response[child.tag] = parseXmlToJson(child) if len(list(child)) > 0 else child.text or ''
+        # one-liner equivalent
+        # response[child.tag] = parseXmlToJson(child) if len(list(child)) > 0 else child.text or ''
 
-  return response
+    return response
+
 
 @pytest.mark.fails_on_aws
 def test_account_usage():
     # boto3.set_stream_logger(name='botocore')
     client = get_client()
+
     # adds the unordered query parameter
     def add_usage(**kwargs):
         kwargs['params']['url'] += "?usage"
+
     client.meta.events.register('before-call.s3.ListBuckets', add_usage)
     client.meta.events.register('after-call.s3.ListBuckets', get_http_response_body)
     client.list_buckets()
-    xml    = ET.fromstring(http_response_body.decode('utf-8'))
+    xml = ET.fromstring(http_response_body.decode('utf-8'))
     parsed = parseXmlToJson(xml)
     summary = parsed['Summary']
     assert summary['QuotaMaxBytes'] == '-1'
@@ -1091,6 +1169,7 @@ def test_account_usage():
     assert summary['QuotaMaxObjCount'] == '-1'
     assert summary['QuotaMaxBytesPerBucket'] == '-1'
     assert summary['QuotaMaxObjCountPerBucket'] == '-1'
+
 
 @pytest.mark.fails_on_aws
 @pytest.mark.fails_on_dbstore
@@ -1110,6 +1189,7 @@ def test_head_bucket_usage():
     assert hdrs['X-RGW-Quota-Bucket-Size'] == '-1'
     assert hdrs['X-RGW-Quota-Bucket-Objects'] == '-1'
 
+
 @pytest.mark.fails_on_aws
 @pytest.mark.fails_on_dbstore
 def test_bucket_list_unordered():
@@ -1125,6 +1205,7 @@ def test_bucket_list_unordered():
     # adds the unordered query parameter
     def add_unordered(**kwargs):
         kwargs['params']['url'] += "&allow-unordered=true"
+
     client.meta.events.register('before-call.s3.ListObjects', add_unordered)
 
     # test simple retrieval
@@ -1163,6 +1244,7 @@ def test_bucket_list_unordered():
     assert status == 400
     assert error_code == 'InvalidArgument'
 
+
 @pytest.mark.fails_on_aws
 @pytest.mark.list_objects_v2
 @pytest.mark.fails_on_dbstore
@@ -1179,6 +1261,7 @@ def test_bucket_listv2_unordered():
     # adds the unordered query parameter
     def add_unordered(**kwargs):
         kwargs['params']['url'] += "&allow-unordered=true"
+
     client.meta.events.register('before-call.s3.ListObjects', add_unordered)
 
     # test simple retrieval
@@ -1189,8 +1272,8 @@ def test_bucket_listv2_unordered():
 
     # test retrieval with prefix
     response = client.list_objects_v2(Bucket=bucket_name,
-                                   MaxKeys=1000,
-                                   Prefix="abc/")
+                                      MaxKeys=1000,
+                                      Prefix="abc/")
     unordered_keys_out = _get_keys(response)
     assert 5 == len(unordered_keys_out)
 
@@ -1201,8 +1284,8 @@ def test_bucket_listv2_unordered():
 
     # now get the next bunch
     response = client.list_objects_v2(Bucket=bucket_name,
-                                   MaxKeys=6,
-                                   StartAfter=unordered_keys_out[-1])
+                                      MaxKeys=6,
+                                      StartAfter=unordered_keys_out[-1])
     unordered_keys_out2 = _get_keys(response)
     assert 6 == len(unordered_keys_out2)
 
@@ -1227,13 +1310,13 @@ def test_bucket_list_maxkeys_invalid():
     # before list_objects is called
     def add_invalid_maxkeys(**kwargs):
         kwargs['params']['url'] += "&max-keys=blah"
+
     client.meta.events.register('before-call.s3.ListObjects', add_invalid_maxkeys)
 
     e = assert_raises(ClientError, client.list_objects, Bucket=bucket_name)
     status, error_code = _get_status_and_error_code(e.response)
     assert status == 400
     assert error_code == 'InvalidArgument'
-
 
 
 def test_bucket_list_marker_none():
@@ -1256,6 +1339,7 @@ def test_bucket_list_marker_empty():
     keys = _get_keys(response)
     assert keys == key_names
 
+
 @pytest.mark.list_objects_v2
 def test_bucket_listv2_continuationtoken_empty():
     key_names = ['bar', 'baz', 'foo', 'quxx']
@@ -1267,6 +1351,7 @@ def test_bucket_listv2_continuationtoken_empty():
     assert response['IsTruncated'] == False
     keys = _get_keys(response)
     assert keys == key_names
+
 
 @pytest.mark.list_objects_v2
 def test_bucket_listv2_continuationtoken():
@@ -1283,6 +1368,7 @@ def test_bucket_listv2_continuationtoken():
     key_names2 = ['baz', 'foo', 'quxx']
     keys = _get_keys(response2)
     assert keys == key_names2
+
 
 @pytest.mark.list_objects_v2
 @pytest.mark.fails_on_dbstore
@@ -1302,6 +1388,7 @@ def test_bucket_listv2_both_continuationtoken_startafter():
     keys = _get_keys(response2)
     assert keys == key_names2
 
+
 def test_bucket_list_marker_unreadable():
     key_names = ['bar', 'baz', 'foo', 'quxx']
     bucket_name = _create_objects(keys=key_names)
@@ -1312,6 +1399,7 @@ def test_bucket_list_marker_unreadable():
     assert response['IsTruncated'] == False
     keys = _get_keys(response)
     assert keys == key_names
+
 
 @pytest.mark.list_objects_v2
 def test_bucket_listv2_startafter_unreadable():
@@ -1325,6 +1413,7 @@ def test_bucket_listv2_startafter_unreadable():
     keys = _get_keys(response)
     assert keys == key_names
 
+
 def test_bucket_list_marker_not_in_list():
     key_names = ['bar', 'baz', 'foo', 'quxx']
     bucket_name = _create_objects(keys=key_names)
@@ -1333,7 +1422,8 @@ def test_bucket_list_marker_not_in_list():
     response = client.list_objects(Bucket=bucket_name, Marker='blah')
     assert response['Marker'] == 'blah'
     keys = _get_keys(response)
-    assert keys == [ 'foo','quxx']
+    assert keys == ['foo', 'quxx']
+
 
 @pytest.mark.list_objects_v2
 def test_bucket_listv2_startafter_not_in_list():
@@ -1346,6 +1436,7 @@ def test_bucket_listv2_startafter_not_in_list():
     keys = _get_keys(response)
     assert keys == ['foo', 'quxx']
 
+
 def test_bucket_list_marker_after_list():
     key_names = ['bar', 'baz', 'foo', 'quxx']
     bucket_name = _create_objects(keys=key_names)
@@ -1356,6 +1447,7 @@ def test_bucket_list_marker_after_list():
     keys = _get_keys(response)
     assert response['IsTruncated'] == False
     assert keys == []
+
 
 @pytest.mark.list_objects_v2
 def test_bucket_listv2_startafter_after_list():
@@ -1369,6 +1461,7 @@ def test_bucket_listv2_startafter_after_list():
     assert response['IsTruncated'] == False
     assert keys == []
 
+
 def _compare_dates(datetime1, datetime2):
     """
     changes ms from datetime1 to 0, compares it to datetime2
@@ -1377,6 +1470,7 @@ def _compare_dates(datetime1, datetime2):
     # microseconds and datetime2 does not
     datetime1 = datetime1.replace(microsecond=0)
     assert datetime1 == datetime2
+
 
 @pytest.mark.fails_on_dbstore
 def test_bucket_list_return_data():
@@ -1395,10 +1489,10 @@ def test_bucket_list_return_data():
                 'ETag': obj_response['ETag'],
                 'LastModified': obj_response['LastModified'],
                 'ContentLength': obj_response['ContentLength'],
-                }
-            })
+            }
+        })
 
-    response  = client.list_objects(Bucket=bucket_name)
+    response = client.list_objects(Bucket=bucket_name)
     objs_list = response['Contents']
     for obj in objs_list:
         key_name = obj['Key']
@@ -1407,15 +1501,17 @@ def test_bucket_list_return_data():
         assert obj['Size'] == key_data['ContentLength']
         assert obj['Owner']['DisplayName'] == key_data['DisplayName']
         assert obj['Owner']['ID'] == key_data['ID']
-        _compare_dates(obj['LastModified'],key_data['LastModified'])
+        _compare_dates(obj['LastModified'], key_data['LastModified'])
 
-
+@pytest.mark.versioning
+# @pytest.mark.skip(reason="ACL is not supported")
+@allure.description("ACL is not supported")
 @pytest.mark.fails_on_dbstore
 def test_bucket_list_return_data_versioning():
     bucket_name = get_new_bucket()
     check_configure_versioning_retry(bucket_name, "Enabled", "Enabled")
     key_names = ['bar', 'baz', 'foo']
-    bucket_name = _create_objects(bucket_name=bucket_name,keys=key_names)
+    bucket_name = _create_objects(bucket_name=bucket_name, keys=key_names)
 
     client = get_client()
     data = {}
@@ -1431,10 +1527,10 @@ def test_bucket_list_return_data_versioning():
                 'LastModified': obj_response['LastModified'],
                 'ContentLength': obj_response['ContentLength'],
                 'VersionId': obj_response['VersionId']
-                }
-            })
+            }
+        })
 
-    response  = client.list_object_versions(Bucket=bucket_name)
+    response = client.list_object_versions(Bucket=bucket_name)
     objs_list = response['Versions']
 
     for obj in objs_list:
@@ -1445,7 +1541,8 @@ def test_bucket_list_return_data_versioning():
         assert obj['Size'] == key_data['ContentLength']
         assert obj['Owner']['ID'] == key_data['ID']
         assert obj['VersionId'] == key_data['VersionId']
-        _compare_dates(obj['LastModified'],key_data['LastModified'])
+        _compare_dates(obj['LastModified'], key_data['LastModified'])
+
 
 def test_bucket_list_objects_anonymous():
     bucket_name = get_new_bucket()
@@ -1454,6 +1551,7 @@ def test_bucket_list_objects_anonymous():
 
     unauthenticated_client = get_unauthenticated_client()
     unauthenticated_client.list_objects(Bucket=bucket_name)
+
 
 @pytest.mark.list_objects_v2
 def test_bucket_listv2_objects_anonymous():
@@ -1464,6 +1562,7 @@ def test_bucket_listv2_objects_anonymous():
     unauthenticated_client = get_unauthenticated_client()
     unauthenticated_client.list_objects_v2(Bucket=bucket_name)
 
+
 def test_bucket_list_objects_anonymous_fail():
     bucket_name = get_new_bucket()
 
@@ -1473,6 +1572,7 @@ def test_bucket_list_objects_anonymous_fail():
     status, error_code = _get_status_and_error_code(e.response)
     assert status == 403
     assert error_code == 'AccessDenied'
+
 
 @pytest.mark.list_objects_v2
 def test_bucket_listv2_objects_anonymous_fail():
@@ -1485,6 +1585,7 @@ def test_bucket_listv2_objects_anonymous_fail():
     assert status == 403
     assert error_code == 'AccessDenied'
 
+
 def test_bucket_notexist():
     bucket_name = get_new_bucket_name()
     client = get_client()
@@ -1494,6 +1595,7 @@ def test_bucket_notexist():
     status, error_code = _get_status_and_error_code(e.response)
     assert status == 404
     assert error_code == 'NoSuchBucket'
+
 
 @pytest.mark.list_objects_v2
 def test_bucketv2_notexist():
@@ -1506,6 +1608,7 @@ def test_bucketv2_notexist():
     assert status == 404
     assert error_code == 'NoSuchBucket'
 
+
 def test_bucket_delete_notexist():
     bucket_name = get_new_bucket_name()
     client = get_client()
@@ -1515,6 +1618,7 @@ def test_bucket_delete_notexist():
     status, error_code = _get_status_and_error_code(e.response)
     assert status == 404
     assert error_code == 'NoSuchBucket'
+
 
 def test_bucket_delete_nonempty():
     key_names = ['foo']
@@ -1527,6 +1631,7 @@ def test_bucket_delete_nonempty():
     assert status == 409
     assert error_code == 'BucketNotEmpty'
 
+
 def _do_set_bucket_canned_acl(client, bucket_name, canned_acl, i, results):
     try:
         client.put_bucket_acl(ACL=canned_acl, Bucket=bucket_name)
@@ -1534,25 +1639,28 @@ def _do_set_bucket_canned_acl(client, bucket_name, canned_acl, i, results):
     except:
         results[i] = False
 
+
 def _do_set_bucket_canned_acl_concurrent(client, bucket_name, canned_acl, num, results):
     t = []
     for i in range(num):
-        thr = threading.Thread(target = _do_set_bucket_canned_acl, args=(client, bucket_name, canned_acl, i, results))
+        thr = threading.Thread(target=_do_set_bucket_canned_acl, args=(client, bucket_name, canned_acl, i, results))
         thr.start()
         t.append(thr)
     return t
+
 
 def _do_wait_completion(t):
     for thr in t:
         thr.join()
 
+
 def test_bucket_concurrent_set_canned_acl():
     bucket_name = get_new_bucket()
     client = get_client()
 
-    num_threads = 50 # boto2 retry defaults to 5 so we need a thread to fail at least 5 times
-                     # this seems like a large enough number to get through retry (if bug
-                     # exists)
+    num_threads = 50  # boto2 retry defaults to 5 so we need a thread to fail at least 5 times
+    # this seems like a large enough number to get through retry (if bug
+    # exists)
     results = [None] * num_threads
 
     t = _do_set_bucket_canned_acl_concurrent(client, bucket_name, 'public-read', num_threads, results)
@@ -1560,6 +1668,7 @@ def test_bucket_concurrent_set_canned_acl():
 
     for r in results:
         assert r == True
+
 
 def test_object_write_to_nonexist_bucket():
     key_names = ['foo']
@@ -1575,6 +1684,7 @@ def test_object_write_to_nonexist_bucket():
 
 def _ev_add_te_header(request, **kwargs):
     request.headers.add_header('Transfer-Encoding', 'chunked')
+
 
 def test_object_write_with_chunked_transfer_encoding():
     bucket_name = get_new_bucket()
@@ -1597,6 +1707,7 @@ def test_bucket_create_delete():
     assert status == 404
     assert error_code == 'NoSuchBucket'
 
+
 def test_object_read_not_exist():
     bucket_name = get_new_bucket()
     client = get_client()
@@ -1607,11 +1718,14 @@ def test_object_read_not_exist():
     assert status == 404
     assert error_code == 'NoSuchKey'
 
+
 http_response = None
+
 
 def get_http_response(**kwargs):
     global http_response
     http_response = kwargs['http_response'].__dict__
+
 
 @pytest.mark.fails_on_dbstore
 def test_object_requestid_matches_header_on_error():
@@ -1629,6 +1743,7 @@ def test_object_requestid_matches_header_on_error():
     assert request_id is not None
     assert request_id == e.response['ResponseMetadata']['RequestId']
 
+
 def _make_objs_dict(key_names):
     objs_list = []
     for key in key_names:
@@ -1637,6 +1752,8 @@ def _make_objs_dict(key_names):
     objs_dict = {'Objects': objs_list}
     return objs_dict
 
+
+@pytest.mark.versioning
 def test_versioning_concurrent_multi_object_delete():
     num_objects = 5
     num_threads = 5
@@ -1658,7 +1775,7 @@ def test_versioning_concurrent_multi_object_delete():
 
     t = []
     for i in range(num_threads):
-        thr = threading.Thread(target = do_request, args=[i])
+        thr = threading.Thread(target=do_request, args=[i])
         thr.start()
         t.append(thr)
     _do_wait_completion(t)
@@ -1669,6 +1786,7 @@ def test_versioning_concurrent_multi_object_delete():
 
     response = client.list_objects(Bucket=bucket_name)
     assert 'Contents' not in response
+
 
 def test_multi_object_delete():
     key_names = ['key0', 'key1', 'key2']
@@ -1690,6 +1808,7 @@ def test_multi_object_delete():
     assert 'Errors' not in response
     response = client.list_objects(Bucket=bucket_name)
     assert 'Contents' not in response
+
 
 @pytest.mark.list_objects_v2
 def test_multi_objectv2_delete():
@@ -1713,6 +1832,7 @@ def test_multi_objectv2_delete():
     response = client.list_objects_v2(Bucket=bucket_name)
     assert 'Contents' not in response
 
+
 def test_multi_object_delete_key_limit():
     key_names = [f"key-{i}" for i in range(1001)]
     bucket_name = _create_objects(keys=key_names)
@@ -1726,9 +1846,10 @@ def test_multi_object_delete_key_limit():
     assert numKeys == 1001
 
     objs_dict = _make_objs_dict(key_names=key_names)
-    e = assert_raises(ClientError,client.delete_objects,Bucket=bucket_name,Delete=objs_dict)
+    e = assert_raises(ClientError, client.delete_objects, Bucket=bucket_name, Delete=objs_dict)
     status, error_code = _get_status_and_error_code(e.response)
     assert status == 400
+
 
 def test_multi_objectv2_delete_key_limit():
     key_names = [f"key-{i}" for i in range(1001)]
@@ -1743,9 +1864,10 @@ def test_multi_objectv2_delete_key_limit():
     assert numKeys == 1001
 
     objs_dict = _make_objs_dict(key_names=key_names)
-    e = assert_raises(ClientError,client.delete_objects,Bucket=bucket_name,Delete=objs_dict)
+    e = assert_raises(ClientError, client.delete_objects, Bucket=bucket_name, Delete=objs_dict)
     status, error_code = _get_status_and_error_code(e.response)
     assert status == 400
+
 
 def test_object_head_zero_bytes():
     bucket_name = get_new_bucket()
@@ -1755,12 +1877,14 @@ def test_object_head_zero_bytes():
     response = client.head_object(Bucket=bucket_name, Key='foo')
     assert response['ContentLength'] == 0
 
+
 def test_object_write_check_etag():
     bucket_name = get_new_bucket()
     client = get_client()
     response = client.put_object(Bucket=bucket_name, Key='foo', Body='bar')
     assert response['ResponseMetadata']['HTTPStatusCode'] == 200
     assert response['ETag'] == '"37b51d194a7513e45b56f6524f2d51f2"'
+
 
 def test_object_write_cache_control():
     bucket_name = get_new_bucket()
@@ -1770,6 +1894,7 @@ def test_object_write_cache_control():
 
     response = client.head_object(Bucket=bucket_name, Key='foo')
     assert response['ResponseMetadata']['HTTPHeaders']['cache-control'] == cache_control
+
 
 def test_object_write_expires():
     bucket_name = get_new_bucket()
@@ -1782,12 +1907,14 @@ def test_object_write_expires():
     response = client.head_object(Bucket=bucket_name, Key='foo')
     _compare_dates(expires, response['Expires'])
 
+
 def _get_body(response):
     body = response['Body']
     got = body.read()
     if type(got) is bytes:
         got = got.decode()
     return got
+
 
 def test_object_write_read_update_read_delete():
     bucket_name = get_new_bucket()
@@ -1808,6 +1935,7 @@ def test_object_write_read_update_read_delete():
     # Delete
     client.delete_object(Bucket=bucket_name, Key='foo')
 
+
 def _set_get_metadata(metadata, bucket_name=None):
     """
     create a new bucket new or use an existing
@@ -1825,13 +1953,16 @@ def _set_get_metadata(metadata, bucket_name=None):
     response = client.get_object(Bucket=bucket_name, Key='foo')
     return response['Metadata']['meta1']
 
+
 def test_object_set_get_metadata_none_to_good():
     got = _set_get_metadata('mymeta')
     assert got == 'mymeta'
 
+
 def test_object_set_get_metadata_none_to_empty():
     got = _set_get_metadata('')
     assert got == ''
+
 
 def test_object_set_get_metadata_overwrite_to_empty():
     bucket_name = get_new_bucket()
@@ -1839,6 +1970,7 @@ def test_object_set_get_metadata_overwrite_to_empty():
     assert got == 'oldmeta'
     got = _set_get_metadata('', bucket_name)
     assert got == ''
+
 
 # TODO: the decoding of this unicode metadata is not happening properly for unknown reasons
 @pytest.mark.fails_on_rgw
@@ -1858,6 +1990,7 @@ def test_object_set_get_unicode_metadata():
     print(u"Hello World\xe9")
     assert got == u"Hello World\xe9"
 
+
 def _set_get_metadata_unreadable(metadata, bucket_name=None):
     """
     set and then read back a meta-data value (which presumably
@@ -1874,6 +2007,7 @@ def _set_get_metadata_unreadable(metadata, bucket_name=None):
     e = assert_raises(ClientError, client.put_object, Bucket=bucket_name, Key='bar', Metadata=metadata_dict)
     return e
 
+
 def test_object_metadata_replaced_on_put():
     bucket_name = get_new_bucket()
     client = get_client()
@@ -1886,6 +2020,7 @@ def test_object_metadata_replaced_on_put():
     got = response['Metadata']
     assert got == {}
 
+
 def test_object_write_file():
     bucket_name = get_new_bucket()
     client = get_client()
@@ -1896,16 +2031,18 @@ def test_object_write_file():
     body = _get_body(response)
     assert body == 'bar'
 
+
 def _get_post_url(bucket_name):
     endpoint = get_config_endpoint()
     return '{endpoint}/{bucket_name}'.format(endpoint=endpoint, bucket_name=bucket_name)
+
 
 def test_post_object_anonymous_request():
     bucket_name = get_new_bucket_name()
     client = get_client()
     url = _get_post_url(bucket_name)
-    payload = OrderedDict([("key" , "foo.txt"),("acl" , "public-read"),\
-    ("Content-Type" , "text/plain"),('file', ('bar'))])
+    payload = OrderedDict([("key", "foo.txt"), ("acl", "public-read"), \
+                           ("Content-Type", "text/plain"), ('file', ('bar'))])
 
     client.create_bucket(ACL='public-read-write', Bucket=bucket_name)
     r = requests.post(url, files=payload, verify=get_config_ssl_verify())
@@ -1913,6 +2050,7 @@ def test_post_object_anonymous_request():
     response = client.get_object(Bucket=bucket_name, Key='foo.txt')
     body = _get_body(response)
     assert body == 'bar'
+
 
 def test_post_object_authenticated_request():
     bucket_name = get_new_bucket()
@@ -1922,16 +2060,15 @@ def test_post_object_authenticated_request():
     utc = pytz.utc
     expires = datetime.datetime.now(utc) + datetime.timedelta(seconds=+6000)
 
-    policy_document = {"expiration": expires.strftime("%Y-%m-%dT%H:%M:%SZ"),\
-    "conditions": [\
-    {"bucket": bucket_name},\
-    ["starts-with", "$key", "foo"],\
-    {"acl": "private"},\
-    ["starts-with", "$Content-Type", "text/plain"],\
-    ["content-length-range", 0, 1024]\
-    ]\
-    }
-
+    policy_document = {"expiration": expires.strftime("%Y-%m-%dT%H:%M:%SZ"), \
+                       "conditions": [ \
+                           {"bucket": bucket_name}, \
+                           ["starts-with", "$key", "foo"], \
+                           {"acl": "private"}, \
+                           ["starts-with", "$Content-Type", "text/plain"], \
+                           ["content-length-range", 0, 1024] \
+                           ] \
+                       }
 
     json_policy_document = json.JSONEncoder().encode(policy_document)
     bytes_json_policy_document = bytes(json_policy_document, 'utf-8')
@@ -1942,9 +2079,9 @@ def test_post_object_authenticated_request():
 
     signature = base64.b64encode(hmac.new(bytes(aws_secret_access_key, 'utf-8'), policy, hashlib.sha1).digest())
 
-    payload = OrderedDict([ ("key" , "foo.txt"),("AWSAccessKeyId" , aws_access_key_id),\
-    ("acl" , "private"),("signature" , signature),("policy" , policy),\
-    ("Content-Type" , "text/plain"),('file', ('bar'))])
+    payload = OrderedDict([("key", "foo.txt"), ("AWSAccessKeyId", aws_access_key_id), \
+                           ("acl", "private"), ("signature", signature), ("policy", policy), \
+                           ("Content-Type", "text/plain"), ('file', ('bar'))])
 
     r = requests.post(url, files=payload, verify=get_config_ssl_verify())
     assert r.status_code == 204
@@ -1952,24 +2089,24 @@ def test_post_object_authenticated_request():
     body = _get_body(response)
     assert body == 'bar'
 
+
 def test_post_object_authenticated_no_content_type():
     bucket_name = get_new_bucket_name()
     client = get_client()
     client.create_bucket(ACL='public-read-write', Bucket=bucket_name)
 
-
     url = _get_post_url(bucket_name)
     utc = pytz.utc
     expires = datetime.datetime.now(utc) + datetime.timedelta(seconds=+6000)
 
-    policy_document = {"expiration": expires.strftime("%Y-%m-%dT%H:%M:%SZ"),\
-    "conditions": [\
-    {"bucket": bucket_name},\
-    ["starts-with", "$key", "foo"],\
-    {"acl": "private"},\
-    ["content-length-range", 0, 1024]\
-    ]\
-    }
+    policy_document = {"expiration": expires.strftime("%Y-%m-%dT%H:%M:%SZ"), \
+                       "conditions": [ \
+                           {"bucket": bucket_name}, \
+                           ["starts-with", "$key", "foo"], \
+                           {"acl": "private"}, \
+                           ["content-length-range", 0, 1024] \
+                           ] \
+                       }
 
     json_policy_document = json.JSONEncoder().encode(policy_document)
     bytes_json_policy_document = bytes(json_policy_document, 'utf-8')
@@ -1979,15 +2116,16 @@ def test_post_object_authenticated_no_content_type():
 
     signature = base64.b64encode(hmac.new(bytes(aws_secret_access_key, 'utf-8'), policy, hashlib.sha1).digest())
 
-    payload = OrderedDict([ ("key" , "foo.txt"),("AWSAccessKeyId" , aws_access_key_id),\
-    ("acl" , "private"),("signature" , signature),("policy" , policy),\
-    ('file', ('bar'))])
+    payload = OrderedDict([("key", "foo.txt"), ("AWSAccessKeyId", aws_access_key_id), \
+                           ("acl", "private"), ("signature", signature), ("policy", policy), \
+                           ('file', ('bar'))])
 
     r = requests.post(url, files=payload, verify=get_config_ssl_verify())
     assert r.status_code == 204
     response = client.get_object(Bucket=bucket_name, Key="foo.txt")
     body = _get_body(response)
     assert body == 'bar'
+
 
 def test_post_object_authenticated_request_bad_access_key():
     bucket_name = get_new_bucket_name()
@@ -1998,16 +2136,15 @@ def test_post_object_authenticated_request_bad_access_key():
     utc = pytz.utc
     expires = datetime.datetime.now(utc) + datetime.timedelta(seconds=+6000)
 
-    policy_document = {"expiration": expires.strftime("%Y-%m-%dT%H:%M:%SZ"),\
-    "conditions": [\
-    {"bucket": bucket_name},\
-    ["starts-with", "$key", "foo"],\
-    {"acl": "private"},\
-    ["starts-with", "$Content-Type", "text/plain"],\
-    ["content-length-range", 0, 1024]\
-    ]\
-    }
-
+    policy_document = {"expiration": expires.strftime("%Y-%m-%dT%H:%M:%SZ"), \
+                       "conditions": [ \
+                           {"bucket": bucket_name}, \
+                           ["starts-with", "$key", "foo"], \
+                           {"acl": "private"}, \
+                           ["starts-with", "$Content-Type", "text/plain"], \
+                           ["content-length-range", 0, 1024] \
+                           ] \
+                       }
 
     json_policy_document = json.JSONEncoder().encode(policy_document)
     bytes_json_policy_document = bytes(json_policy_document, 'utf-8')
@@ -2017,12 +2154,13 @@ def test_post_object_authenticated_request_bad_access_key():
 
     signature = base64.b64encode(hmac.new(bytes(aws_secret_access_key, 'utf-8'), policy, hashlib.sha1).digest())
 
-    payload = OrderedDict([ ("key" , "foo.txt"),("AWSAccessKeyId" , 'foo'),\
-    ("acl" , "private"),("signature" , signature),("policy" , policy),\
-    ("Content-Type" , "text/plain"),('file', ('bar'))])
+    payload = OrderedDict([("key", "foo.txt"), ("AWSAccessKeyId", 'foo'), \
+                           ("acl", "private"), ("signature", signature), ("policy", policy), \
+                           ("Content-Type", "text/plain"), ('file', ('bar'))])
 
     r = requests.post(url, files=payload, verify=get_config_ssl_verify())
     assert r.status_code == 403
+
 
 def test_post_object_set_success_code():
     bucket_name = get_new_bucket_name()
@@ -2030,14 +2168,15 @@ def test_post_object_set_success_code():
     client.create_bucket(ACL='public-read-write', Bucket=bucket_name)
 
     url = _get_post_url(bucket_name)
-    payload = OrderedDict([("key" , "foo.txt"),("acl" , "public-read"),\
-    ("success_action_status" , "201"),\
-    ("Content-Type" , "text/plain"),('file', ('bar'))])
+    payload = OrderedDict([("key", "foo.txt"), ("acl", "public-read"), \
+                           ("success_action_status", "201"), \
+                           ("Content-Type", "text/plain"), ('file', ('bar'))])
 
     r = requests.post(url, files=payload, verify=get_config_ssl_verify())
     assert r.status_code == 201
     message = ET.fromstring(r.content).find('Key')
     assert message.text == 'foo.txt'
+
 
 def test_post_object_set_invalid_success_code():
     bucket_name = get_new_bucket_name()
@@ -2045,14 +2184,15 @@ def test_post_object_set_invalid_success_code():
     client.create_bucket(ACL='public-read-write', Bucket=bucket_name)
 
     url = _get_post_url(bucket_name)
-    payload = OrderedDict([("key" , "foo.txt"),("acl" , "public-read"),\
-    ("success_action_status" , "404"),\
-    ("Content-Type" , "text/plain"),('file', ('bar'))])
+    payload = OrderedDict([("key", "foo.txt"), ("acl", "public-read"), \
+                           ("success_action_status", "404"), \
+                           ("Content-Type", "text/plain"), ('file', ('bar'))])
 
     r = requests.post(url, files=payload, verify=get_config_ssl_verify())
     assert r.status_code == 204
     content = r.content.decode()
     assert content == ''
+
 
 def test_post_object_upload_larger_than_chunk():
     bucket_name = get_new_bucket()
@@ -2062,16 +2202,15 @@ def test_post_object_upload_larger_than_chunk():
     utc = pytz.utc
     expires = datetime.datetime.now(utc) + datetime.timedelta(seconds=+6000)
 
-    policy_document = {"expiration": expires.strftime("%Y-%m-%dT%H:%M:%SZ"),\
-    "conditions": [\
-    {"bucket": bucket_name},\
-    ["starts-with", "$key", "foo"],\
-    {"acl": "private"},\
-    ["starts-with", "$Content-Type", "text/plain"],\
-    ["content-length-range", 0, 5*1024*1024]\
-    ]\
-    }
-
+    policy_document = {"expiration": expires.strftime("%Y-%m-%dT%H:%M:%SZ"), \
+                       "conditions": [ \
+                           {"bucket": bucket_name}, \
+                           ["starts-with", "$key", "foo"], \
+                           {"acl": "private"}, \
+                           ["starts-with", "$Content-Type", "text/plain"], \
+                           ["content-length-range", 0, 5 * 1024 * 1024] \
+                           ] \
+                       }
 
     json_policy_document = json.JSONEncoder().encode(policy_document)
     bytes_json_policy_document = bytes(json_policy_document, 'utf-8')
@@ -2081,17 +2220,18 @@ def test_post_object_upload_larger_than_chunk():
 
     signature = base64.b64encode(hmac.new(bytes(aws_secret_access_key, 'utf-8'), policy, hashlib.sha1).digest())
 
-    foo_string = 'foo' * 1024*1024
+    foo_string = 'foo' * 1024 * 1024
 
-    payload = OrderedDict([ ("key" , "foo.txt"),("AWSAccessKeyId" , aws_access_key_id),\
-    ("acl" , "private"),("signature" , signature),("policy" , policy),\
-    ("Content-Type" , "text/plain"),('file', foo_string)])
+    payload = OrderedDict([("key", "foo.txt"), ("AWSAccessKeyId", aws_access_key_id), \
+                           ("acl", "private"), ("signature", signature), ("policy", policy), \
+                           ("Content-Type", "text/plain"), ('file', foo_string)])
 
     r = requests.post(url, files=payload, verify=get_config_ssl_verify())
     assert r.status_code == 204
     response = client.get_object(Bucket=bucket_name, Key='foo.txt')
     body = _get_body(response)
     assert body == foo_string
+
 
 def test_post_object_set_key_from_filename():
     bucket_name = get_new_bucket()
@@ -2101,15 +2241,15 @@ def test_post_object_set_key_from_filename():
     utc = pytz.utc
     expires = datetime.datetime.now(utc) + datetime.timedelta(seconds=+6000)
 
-    policy_document = {"expiration": expires.strftime("%Y-%m-%dT%H:%M:%SZ"),\
-    "conditions": [\
-    {"bucket": bucket_name},\
-    ["starts-with", "$key", "foo"],\
-    {"acl": "private"},\
-    ["starts-with", "$Content-Type", "text/plain"],\
-    ["content-length-range", 0, 1024]\
-    ]\
-    }
+    policy_document = {"expiration": expires.strftime("%Y-%m-%dT%H:%M:%SZ"), \
+                       "conditions": [ \
+                           {"bucket": bucket_name}, \
+                           ["starts-with", "$key", "foo"], \
+                           {"acl": "private"}, \
+                           ["starts-with", "$Content-Type", "text/plain"], \
+                           ["content-length-range", 0, 1024] \
+                           ] \
+                       }
 
     json_policy_document = json.JSONEncoder().encode(policy_document)
     bytes_json_policy_document = bytes(json_policy_document, 'utf-8')
@@ -2119,15 +2259,16 @@ def test_post_object_set_key_from_filename():
 
     signature = base64.b64encode(hmac.new(bytes(aws_secret_access_key, 'utf-8'), policy, hashlib.sha1).digest())
 
-    payload = OrderedDict([ ("key" , "${filename}"),("AWSAccessKeyId" , aws_access_key_id),\
-    ("acl" , "private"),("signature" , signature),("policy" , policy),\
-    ("Content-Type" , "text/plain"),('file', ('foo.txt', 'bar'))])
+    payload = OrderedDict([("key", "${filename}"), ("AWSAccessKeyId", aws_access_key_id), \
+                           ("acl", "private"), ("signature", signature), ("policy", policy), \
+                           ("Content-Type", "text/plain"), ('file', ('foo.txt', 'bar'))])
 
     r = requests.post(url, files=payload, verify=get_config_ssl_verify())
     assert r.status_code == 204
     response = client.get_object(Bucket=bucket_name, Key='foo.txt')
     body = _get_body(response)
     assert body == 'bar'
+
 
 def test_post_object_ignored_header():
     bucket_name = get_new_bucket()
@@ -2137,16 +2278,15 @@ def test_post_object_ignored_header():
     utc = pytz.utc
     expires = datetime.datetime.now(utc) + datetime.timedelta(seconds=+6000)
 
-    policy_document = {"expiration": expires.strftime("%Y-%m-%dT%H:%M:%SZ"),\
-    "conditions": [\
-    {"bucket": bucket_name},\
-    ["starts-with", "$key", "foo"],\
-    {"acl": "private"},\
-    ["starts-with", "$Content-Type", "text/plain"],\
-    ["content-length-range", 0, 1024]\
-    ]\
-    }
-
+    policy_document = {"expiration": expires.strftime("%Y-%m-%dT%H:%M:%SZ"), \
+                       "conditions": [ \
+                           {"bucket": bucket_name}, \
+                           ["starts-with", "$key", "foo"], \
+                           {"acl": "private"}, \
+                           ["starts-with", "$Content-Type", "text/plain"], \
+                           ["content-length-range", 0, 1024] \
+                           ] \
+                       }
 
     json_policy_document = json.JSONEncoder().encode(policy_document)
     bytes_json_policy_document = bytes(json_policy_document, 'utf-8')
@@ -2156,12 +2296,13 @@ def test_post_object_ignored_header():
 
     signature = base64.b64encode(hmac.new(bytes(aws_secret_access_key, 'utf-8'), policy, hashlib.sha1).digest())
 
-    payload = OrderedDict([ ("key" , "foo.txt"),("AWSAccessKeyId" , aws_access_key_id),\
-    ("acl" , "private"),("signature" , signature),("policy" , policy),\
-    ("Content-Type" , "text/plain"),("x-ignore-foo" , "bar"),('file', ('bar'))])
+    payload = OrderedDict([("key", "foo.txt"), ("AWSAccessKeyId", aws_access_key_id), \
+                           ("acl", "private"), ("signature", signature), ("policy", policy), \
+                           ("Content-Type", "text/plain"), ("x-ignore-foo", "bar"), ('file', ('bar'))])
 
     r = requests.post(url, files=payload, verify=get_config_ssl_verify())
     assert r.status_code == 204
+
 
 def test_post_object_case_insensitive_condition_fields():
     bucket_name = get_new_bucket()
@@ -2171,15 +2312,15 @@ def test_post_object_case_insensitive_condition_fields():
     utc = pytz.utc
     expires = datetime.datetime.now(utc) + datetime.timedelta(seconds=+6000)
 
-    policy_document = {"expiration": expires.strftime("%Y-%m-%dT%H:%M:%SZ"),\
-    "conditions": [\
-    {"bUcKeT": bucket_name},\
-    ["StArTs-WiTh", "$KeY", "foo"],\
-    {"AcL": "private"},\
-    ["StArTs-WiTh", "$CoNtEnT-TyPe", "text/plain"],\
-    ["content-length-range", 0, 1024]\
-    ]\
-    }
+    policy_document = {"expiration": expires.strftime("%Y-%m-%dT%H:%M:%SZ"), \
+                       "conditions": [ \
+                           {"bUcKeT": bucket_name}, \
+                           ["StArTs-WiTh", "$KeY", "foo"], \
+                           {"AcL": "private"}, \
+                           ["StArTs-WiTh", "$CoNtEnT-TyPe", "text/plain"], \
+                           ["content-length-range", 0, 1024] \
+                           ] \
+                       }
 
     json_policy_document = json.JSONEncoder().encode(policy_document)
     bytes_json_policy_document = bytes(json_policy_document, 'utf-8')
@@ -2189,14 +2330,15 @@ def test_post_object_case_insensitive_condition_fields():
 
     signature = base64.b64encode(hmac.new(bytes(aws_secret_access_key, 'utf-8'), policy, hashlib.sha1).digest())
 
-    foo_string = 'foo' * 1024*1024
+    foo_string = 'foo' * 1024 * 1024
 
-    payload = OrderedDict([ ("kEy" , "foo.txt"),("AWSAccessKeyId" , aws_access_key_id),\
-    ("aCl" , "private"),("signature" , signature),("pOLICy" , policy),\
-    ("Content-Type" , "text/plain"),('file', ('bar'))])
+    payload = OrderedDict([("kEy", "foo.txt"), ("AWSAccessKeyId", aws_access_key_id), \
+                           ("aCl", "private"), ("signature", signature), ("pOLICy", policy), \
+                           ("Content-Type", "text/plain"), ('file', ('bar'))])
 
     r = requests.post(url, files=payload, verify=get_config_ssl_verify())
     assert r.status_code == 204
+
 
 def test_post_object_escaped_field_values():
     bucket_name = get_new_bucket()
@@ -2206,15 +2348,15 @@ def test_post_object_escaped_field_values():
     utc = pytz.utc
     expires = datetime.datetime.now(utc) + datetime.timedelta(seconds=+6000)
 
-    policy_document = {"expiration": expires.strftime("%Y-%m-%dT%H:%M:%SZ"),\
-    "conditions": [\
-    {"bucket": bucket_name},\
-    ["starts-with", "$key", "\$foo"],\
-    {"acl": "private"},\
-    ["starts-with", "$Content-Type", "text/plain"],\
-    ["content-length-range", 0, 1024]\
-    ]\
-    }
+    policy_document = {"expiration": expires.strftime("%Y-%m-%dT%H:%M:%SZ"), \
+                       "conditions": [ \
+                           {"bucket": bucket_name}, \
+                           ["starts-with", "$key", "\$foo"], \
+                           {"acl": "private"}, \
+                           ["starts-with", "$Content-Type", "text/plain"], \
+                           ["content-length-range", 0, 1024] \
+                           ] \
+                       }
 
     json_policy_document = json.JSONEncoder().encode(policy_document)
     bytes_json_policy_document = bytes(json_policy_document, 'utf-8')
@@ -2224,15 +2366,16 @@ def test_post_object_escaped_field_values():
 
     signature = base64.b64encode(hmac.new(bytes(aws_secret_access_key, 'utf-8'), policy, hashlib.sha1).digest())
 
-    payload = OrderedDict([ ("key" , "\$foo.txt"),("AWSAccessKeyId" , aws_access_key_id),\
-    ("acl" , "private"),("signature" , signature),("policy" , policy),\
-    ("Content-Type" , "text/plain"),('file', ('bar'))])
+    payload = OrderedDict([("key", "\$foo.txt"), ("AWSAccessKeyId", aws_access_key_id), \
+                           ("acl", "private"), ("signature", signature), ("policy", policy), \
+                           ("Content-Type", "text/plain"), ('file', ('bar'))])
 
     r = requests.post(url, files=payload, verify=get_config_ssl_verify())
     assert r.status_code == 204
     response = client.get_object(Bucket=bucket_name, Key='\$foo.txt')
     body = _get_body(response)
     assert body == 'bar'
+
 
 def test_post_object_success_redirect_action():
     bucket_name = get_new_bucket_name()
@@ -2245,16 +2388,16 @@ def test_post_object_success_redirect_action():
     utc = pytz.utc
     expires = datetime.datetime.now(utc) + datetime.timedelta(seconds=+6000)
 
-    policy_document = {"expiration": expires.strftime("%Y-%m-%dT%H:%M:%SZ"),\
-    "conditions": [\
-    {"bucket": bucket_name},\
-    ["starts-with", "$key", "foo"],\
-    {"acl": "private"},\
-    ["starts-with", "$Content-Type", "text/plain"],\
-    ["eq", "$success_action_redirect", redirect_url],\
-    ["content-length-range", 0, 1024]\
-    ]\
-    }
+    policy_document = {"expiration": expires.strftime("%Y-%m-%dT%H:%M:%SZ"), \
+                       "conditions": [ \
+                           {"bucket": bucket_name}, \
+                           ["starts-with", "$key", "foo"], \
+                           {"acl": "private"}, \
+                           ["starts-with", "$Content-Type", "text/plain"], \
+                           ["eq", "$success_action_redirect", redirect_url], \
+                           ["content-length-range", 0, 1024] \
+                           ] \
+                       }
 
     json_policy_document = json.JSONEncoder().encode(policy_document)
     bytes_json_policy_document = bytes(json_policy_document, 'utf-8')
@@ -2264,17 +2407,18 @@ def test_post_object_success_redirect_action():
 
     signature = base64.b64encode(hmac.new(bytes(aws_secret_access_key, 'utf-8'), policy, hashlib.sha1).digest())
 
-    payload = OrderedDict([ ("key" , "foo.txt"),("AWSAccessKeyId" , aws_access_key_id),\
-    ("acl" , "private"),("signature" , signature),("policy" , policy),\
-    ("Content-Type" , "text/plain"),("success_action_redirect" , redirect_url),\
-    ('file', ('bar'))])
+    payload = OrderedDict([("key", "foo.txt"), ("AWSAccessKeyId", aws_access_key_id), \
+                           ("acl", "private"), ("signature", signature), ("policy", policy), \
+                           ("Content-Type", "text/plain"), ("success_action_redirect", redirect_url), \
+                           ('file', ('bar'))])
 
     r = requests.post(url, files=payload, verify=get_config_ssl_verify())
     assert r.status_code == 200
     url = r.url
     response = client.get_object(Bucket=bucket_name, Key='foo.txt')
-    assert url == '{rurl}?bucket={bucket}&key={key}&etag=%22{etag}%22'.format(\
-    rurl = redirect_url, bucket = bucket_name, key = 'foo.txt', etag = response['ETag'].strip('"'))
+    assert url == '{rurl}?bucket={bucket}&key={key}&etag=%22{etag}%22'.format( \
+        rurl=redirect_url, bucket=bucket_name, key='foo.txt', etag=response['ETag'].strip('"'))
+
 
 def test_post_object_invalid_signature():
     bucket_name = get_new_bucket()
@@ -2284,15 +2428,15 @@ def test_post_object_invalid_signature():
     utc = pytz.utc
     expires = datetime.datetime.now(utc) + datetime.timedelta(seconds=+6000)
 
-    policy_document = {"expiration": expires.strftime("%Y-%m-%dT%H:%M:%SZ"),\
-    "conditions": [\
-    {"bucket": bucket_name},\
-    ["starts-with", "$key", "\$foo"],\
-    {"acl": "private"},\
-    ["starts-with", "$Content-Type", "text/plain"],\
-    ["content-length-range", 0, 1024]\
-    ]\
-    }
+    policy_document = {"expiration": expires.strftime("%Y-%m-%dT%H:%M:%SZ"), \
+                       "conditions": [ \
+                           {"bucket": bucket_name}, \
+                           ["starts-with", "$key", "\$foo"], \
+                           {"acl": "private"}, \
+                           ["starts-with", "$Content-Type", "text/plain"], \
+                           ["content-length-range", 0, 1024] \
+                           ] \
+                       }
 
     json_policy_document = json.JSONEncoder().encode(policy_document)
     bytes_json_policy_document = bytes(json_policy_document, 'utf-8')
@@ -2302,12 +2446,13 @@ def test_post_object_invalid_signature():
 
     signature = base64.b64encode(hmac.new(bytes(aws_secret_access_key, 'utf-8'), policy, hashlib.sha1).digest())[::-1]
 
-    payload = OrderedDict([ ("key" , "\$foo.txt"),("AWSAccessKeyId" , aws_access_key_id),\
-    ("acl" , "private"),("signature" , signature),("policy" , policy),\
-    ("Content-Type" , "text/plain"),('file', ('bar'))])
+    payload = OrderedDict([("key", "\$foo.txt"), ("AWSAccessKeyId", aws_access_key_id), \
+                           ("acl", "private"), ("signature", signature), ("policy", policy), \
+                           ("Content-Type", "text/plain"), ('file', ('bar'))])
 
     r = requests.post(url, files=payload, verify=get_config_ssl_verify())
     assert r.status_code == 403
+
 
 def test_post_object_invalid_access_key():
     bucket_name = get_new_bucket()
@@ -2317,15 +2462,15 @@ def test_post_object_invalid_access_key():
     utc = pytz.utc
     expires = datetime.datetime.now(utc) + datetime.timedelta(seconds=+6000)
 
-    policy_document = {"expiration": expires.strftime("%Y-%m-%dT%H:%M:%SZ"),\
-    "conditions": [\
-    {"bucket": bucket_name},\
-    ["starts-with", "$key", "\$foo"],\
-    {"acl": "private"},\
-    ["starts-with", "$Content-Type", "text/plain"],\
-    ["content-length-range", 0, 1024]\
-    ]\
-    }
+    policy_document = {"expiration": expires.strftime("%Y-%m-%dT%H:%M:%SZ"), \
+                       "conditions": [ \
+                           {"bucket": bucket_name}, \
+                           ["starts-with", "$key", "\$foo"], \
+                           {"acl": "private"}, \
+                           ["starts-with", "$Content-Type", "text/plain"], \
+                           ["content-length-range", 0, 1024] \
+                           ] \
+                       }
 
     json_policy_document = json.JSONEncoder().encode(policy_document)
     bytes_json_policy_document = bytes(json_policy_document, 'utf-8')
@@ -2335,12 +2480,13 @@ def test_post_object_invalid_access_key():
 
     signature = base64.b64encode(hmac.new(bytes(aws_secret_access_key, 'utf-8'), policy, hashlib.sha1).digest())
 
-    payload = OrderedDict([ ("key" , "\$foo.txt"),("AWSAccessKeyId" , aws_access_key_id[::-1]),\
-    ("acl" , "private"),("signature" , signature),("policy" , policy),\
-    ("Content-Type" , "text/plain"),('file', ('bar'))])
+    payload = OrderedDict([("key", "\$foo.txt"), ("AWSAccessKeyId", aws_access_key_id[::-1]), \
+                           ("acl", "private"), ("signature", signature), ("policy", policy), \
+                           ("Content-Type", "text/plain"), ('file', ('bar'))])
 
     r = requests.post(url, files=payload, verify=get_config_ssl_verify())
     assert r.status_code == 403
+
 
 def test_post_object_invalid_date_format():
     bucket_name = get_new_bucket()
@@ -2350,15 +2496,15 @@ def test_post_object_invalid_date_format():
     utc = pytz.utc
     expires = datetime.datetime.now(utc) + datetime.timedelta(seconds=+6000)
 
-    policy_document = {"expiration": str(expires),\
-    "conditions": [\
-    {"bucket": bucket_name},\
-    ["starts-with", "$key", "\$foo"],\
-    {"acl": "private"},\
-    ["starts-with", "$Content-Type", "text/plain"],\
-    ["content-length-range", 0, 1024]\
-    ]\
-    }
+    policy_document = {"expiration": str(expires), \
+                       "conditions": [ \
+                           {"bucket": bucket_name}, \
+                           ["starts-with", "$key", "\$foo"], \
+                           {"acl": "private"}, \
+                           ["starts-with", "$Content-Type", "text/plain"], \
+                           ["content-length-range", 0, 1024] \
+                           ] \
+                       }
 
     json_policy_document = json.JSONEncoder().encode(policy_document)
     bytes_json_policy_document = bytes(json_policy_document, 'utf-8')
@@ -2368,12 +2514,13 @@ def test_post_object_invalid_date_format():
 
     signature = base64.b64encode(hmac.new(bytes(aws_secret_access_key, 'utf-8'), policy, hashlib.sha1).digest())
 
-    payload = OrderedDict([ ("key" , "\$foo.txt"),("AWSAccessKeyId" , aws_access_key_id),\
-    ("acl" , "private"),("signature" , signature),("policy" , policy),\
-    ("Content-Type" , "text/plain"),('file', ('bar'))])
+    payload = OrderedDict([("key", "\$foo.txt"), ("AWSAccessKeyId", aws_access_key_id), \
+                           ("acl", "private"), ("signature", signature), ("policy", policy), \
+                           ("Content-Type", "text/plain"), ('file', ('bar'))])
 
     r = requests.post(url, files=payload, verify=get_config_ssl_verify())
     assert r.status_code == 400
+
 
 def test_post_object_no_key_specified():
     bucket_name = get_new_bucket()
@@ -2383,14 +2530,14 @@ def test_post_object_no_key_specified():
     utc = pytz.utc
     expires = datetime.datetime.now(utc) + datetime.timedelta(seconds=+6000)
 
-    policy_document = {"expiration": expires.strftime("%Y-%m-%dT%H:%M:%SZ"),\
-    "conditions": [\
-    {"bucket": bucket_name},\
-    {"acl": "private"},\
-    ["starts-with", "$Content-Type", "text/plain"],\
-    ["content-length-range", 0, 1024]\
-    ]\
-    }
+    policy_document = {"expiration": expires.strftime("%Y-%m-%dT%H:%M:%SZ"), \
+                       "conditions": [ \
+                           {"bucket": bucket_name}, \
+                           {"acl": "private"}, \
+                           ["starts-with", "$Content-Type", "text/plain"], \
+                           ["content-length-range", 0, 1024] \
+                           ] \
+                       }
 
     json_policy_document = json.JSONEncoder().encode(policy_document)
     bytes_json_policy_document = bytes(json_policy_document, 'utf-8')
@@ -2400,12 +2547,13 @@ def test_post_object_no_key_specified():
 
     signature = base64.b64encode(hmac.new(bytes(aws_secret_access_key, 'utf-8'), policy, hashlib.sha1).digest())
 
-    payload = OrderedDict([ ("AWSAccessKeyId" , aws_access_key_id),\
-    ("acl" , "private"),("signature" , signature),("policy" , policy),\
-    ("Content-Type" , "text/plain"),('file', ('bar'))])
+    payload = OrderedDict([("AWSAccessKeyId", aws_access_key_id), \
+                           ("acl", "private"), ("signature", signature), ("policy", policy), \
+                           ("Content-Type", "text/plain"), ('file', ('bar'))])
 
     r = requests.post(url, files=payload, verify=get_config_ssl_verify())
     assert r.status_code == 400
+
 
 def test_post_object_missing_signature():
     bucket_name = get_new_bucket()
@@ -2415,15 +2563,15 @@ def test_post_object_missing_signature():
     utc = pytz.utc
     expires = datetime.datetime.now(utc) + datetime.timedelta(seconds=+6000)
 
-    policy_document = {"expiration": expires.strftime("%Y-%m-%dT%H:%M:%SZ"),\
-    "conditions": [\
-    {"bucket": bucket_name},\
-    ["starts-with", "$key", "\$foo"],\
-    {"acl": "private"},\
-    ["starts-with", "$Content-Type", "text/plain"],\
-    ["content-length-range", 0, 1024]\
-    ]\
-    }
+    policy_document = {"expiration": expires.strftime("%Y-%m-%dT%H:%M:%SZ"), \
+                       "conditions": [ \
+                           {"bucket": bucket_name}, \
+                           ["starts-with", "$key", "\$foo"], \
+                           {"acl": "private"}, \
+                           ["starts-with", "$Content-Type", "text/plain"], \
+                           ["content-length-range", 0, 1024] \
+                           ] \
+                       }
 
     json_policy_document = json.JSONEncoder().encode(policy_document)
     bytes_json_policy_document = bytes(json_policy_document, 'utf-8')
@@ -2433,12 +2581,13 @@ def test_post_object_missing_signature():
 
     signature = base64.b64encode(hmac.new(bytes(aws_secret_access_key, 'utf-8'), policy, hashlib.sha1).digest())
 
-    payload = OrderedDict([ ("key", "foo.txt"),("AWSAccessKeyId" , aws_access_key_id),\
-    ("acl" , "private"),("policy" , policy),\
-    ("Content-Type" , "text/plain"),('file', ('bar'))])
+    payload = OrderedDict([("key", "foo.txt"), ("AWSAccessKeyId", aws_access_key_id), \
+                           ("acl", "private"), ("policy", policy), \
+                           ("Content-Type", "text/plain"), ('file', ('bar'))])
 
     r = requests.post(url, files=payload, verify=get_config_ssl_verify())
     assert r.status_code == 400
+
 
 def test_post_object_missing_policy_condition():
     bucket_name = get_new_bucket()
@@ -2448,14 +2597,14 @@ def test_post_object_missing_policy_condition():
     utc = pytz.utc
     expires = datetime.datetime.now(utc) + datetime.timedelta(seconds=+6000)
 
-    policy_document = {"expiration": expires.strftime("%Y-%m-%dT%H:%M:%SZ"),\
-    "conditions": [\
-    ["starts-with", "$key", "\$foo"],\
-    {"acl": "private"},\
-    ["starts-with", "$Content-Type", "text/plain"],\
-    ["content-length-range", 0, 1024]\
-    ]\
-    }
+    policy_document = {"expiration": expires.strftime("%Y-%m-%dT%H:%M:%SZ"), \
+                       "conditions": [ \
+                           ["starts-with", "$key", "\$foo"], \
+                           {"acl": "private"}, \
+                           ["starts-with", "$Content-Type", "text/plain"], \
+                           ["content-length-range", 0, 1024] \
+                           ] \
+                       }
 
     json_policy_document = json.JSONEncoder().encode(policy_document)
     bytes_json_policy_document = bytes(json_policy_document, 'utf-8')
@@ -2465,12 +2614,13 @@ def test_post_object_missing_policy_condition():
 
     signature = base64.b64encode(hmac.new(bytes(aws_secret_access_key, 'utf-8'), policy, hashlib.sha1).digest())
 
-    payload = OrderedDict([ ("key", "foo.txt"),("AWSAccessKeyId" , aws_access_key_id),\
-    ("acl" , "private"),("signature" , signature),("policy" , policy),\
-    ("Content-Type" , "text/plain"),('file', ('bar'))])
+    payload = OrderedDict([("key", "foo.txt"), ("AWSAccessKeyId", aws_access_key_id), \
+                           ("acl", "private"), ("signature", signature), ("policy", policy), \
+                           ("Content-Type", "text/plain"), ('file', ('bar'))])
 
     r = requests.post(url, files=payload, verify=get_config_ssl_verify())
     assert r.status_code == 403
+
 
 def test_post_object_user_specified_header():
     bucket_name = get_new_bucket()
@@ -2480,16 +2630,16 @@ def test_post_object_user_specified_header():
     utc = pytz.utc
     expires = datetime.datetime.now(utc) + datetime.timedelta(seconds=+6000)
 
-    policy_document = {"expiration": expires.strftime("%Y-%m-%dT%H:%M:%SZ"),\
-    "conditions": [\
-    {"bucket": bucket_name},\
-    ["starts-with", "$key", "foo"],\
-    {"acl": "private"},\
-    ["starts-with", "$Content-Type", "text/plain"],\
-    ["content-length-range", 0, 1024],\
-    ["starts-with", "$x-amz-meta-foo",  "bar"]
-    ]\
-    }
+    policy_document = {"expiration": expires.strftime("%Y-%m-%dT%H:%M:%SZ"), \
+                       "conditions": [ \
+                           {"bucket": bucket_name}, \
+                           ["starts-with", "$key", "foo"], \
+                           {"acl": "private"}, \
+                           ["starts-with", "$Content-Type", "text/plain"], \
+                           ["content-length-range", 0, 1024], \
+                           ["starts-with", "$x-amz-meta-foo", "bar"]
+                       ] \
+                       }
 
     json_policy_document = json.JSONEncoder().encode(policy_document)
     bytes_json_policy_document = bytes(json_policy_document, 'utf-8')
@@ -2499,14 +2649,15 @@ def test_post_object_user_specified_header():
 
     signature = base64.b64encode(hmac.new(bytes(aws_secret_access_key, 'utf-8'), policy, hashlib.sha1).digest())
 
-    payload = OrderedDict([ ("key", "foo.txt"),("AWSAccessKeyId" , aws_access_key_id),\
-    ("acl" , "private"),("signature" , signature),("policy" , policy),\
-    ("Content-Type" , "text/plain"),('x-amz-meta-foo' , 'barclamp'),('file', ('bar'))])
+    payload = OrderedDict([("key", "foo.txt"), ("AWSAccessKeyId", aws_access_key_id), \
+                           ("acl", "private"), ("signature", signature), ("policy", policy), \
+                           ("Content-Type", "text/plain"), ('x-amz-meta-foo', 'barclamp'), ('file', ('bar'))])
 
     r = requests.post(url, files=payload, verify=get_config_ssl_verify())
     assert r.status_code == 204
     response = client.get_object(Bucket=bucket_name, Key='foo.txt')
     assert response['Metadata']['foo'] == 'barclamp'
+
 
 def test_post_object_request_missing_policy_specified_field():
     bucket_name = get_new_bucket()
@@ -2516,16 +2667,16 @@ def test_post_object_request_missing_policy_specified_field():
     utc = pytz.utc
     expires = datetime.datetime.now(utc) + datetime.timedelta(seconds=+6000)
 
-    policy_document = {"expiration": expires.strftime("%Y-%m-%dT%H:%M:%SZ"),\
-    "conditions": [\
-    {"bucket": bucket_name},\
-    ["starts-with", "$key", "foo"],\
-    {"acl": "private"},\
-    ["starts-with", "$Content-Type", "text/plain"],\
-    ["content-length-range", 0, 1024],\
-    ["starts-with", "$x-amz-meta-foo",  "bar"]
-    ]\
-    }
+    policy_document = {"expiration": expires.strftime("%Y-%m-%dT%H:%M:%SZ"), \
+                       "conditions": [ \
+                           {"bucket": bucket_name}, \
+                           ["starts-with", "$key", "foo"], \
+                           {"acl": "private"}, \
+                           ["starts-with", "$Content-Type", "text/plain"], \
+                           ["content-length-range", 0, 1024], \
+                           ["starts-with", "$x-amz-meta-foo", "bar"]
+                       ] \
+                       }
 
     json_policy_document = json.JSONEncoder().encode(policy_document)
     bytes_json_policy_document = bytes(json_policy_document, 'utf-8')
@@ -2535,12 +2686,13 @@ def test_post_object_request_missing_policy_specified_field():
 
     signature = base64.b64encode(hmac.new(bytes(aws_secret_access_key, 'utf-8'), policy, hashlib.sha1).digest())
 
-    payload = OrderedDict([ ("key", "foo.txt"),("AWSAccessKeyId" , aws_access_key_id),\
-    ("acl" , "private"),("signature" , signature),("policy" , policy),\
-    ("Content-Type" , "text/plain"),('file', ('bar'))])
+    payload = OrderedDict([("key", "foo.txt"), ("AWSAccessKeyId", aws_access_key_id), \
+                           ("acl", "private"), ("signature", signature), ("policy", policy), \
+                           ("Content-Type", "text/plain"), ('file', ('bar'))])
 
     r = requests.post(url, files=payload, verify=get_config_ssl_verify())
     assert r.status_code == 403
+
 
 def test_post_object_condition_is_case_sensitive():
     bucket_name = get_new_bucket()
@@ -2550,15 +2702,15 @@ def test_post_object_condition_is_case_sensitive():
     utc = pytz.utc
     expires = datetime.datetime.now(utc) + datetime.timedelta(seconds=+6000)
 
-    policy_document = {"expiration": expires.strftime("%Y-%m-%dT%H:%M:%SZ"),\
-    "CONDITIONS": [\
-    {"bucket": bucket_name},\
-    ["starts-with", "$key", "foo"],\
-    {"acl": "private"},\
-    ["starts-with", "$Content-Type", "text/plain"],\
-    ["content-length-range", 0, 1024],\
-    ]\
-    }
+    policy_document = {"expiration": expires.strftime("%Y-%m-%dT%H:%M:%SZ"), \
+                       "CONDITIONS": [ \
+                           {"bucket": bucket_name}, \
+                           ["starts-with", "$key", "foo"], \
+                           {"acl": "private"}, \
+                           ["starts-with", "$Content-Type", "text/plain"], \
+                           ["content-length-range", 0, 1024], \
+                           ] \
+                       }
 
     json_policy_document = json.JSONEncoder().encode(policy_document)
     bytes_json_policy_document = bytes(json_policy_document, 'utf-8')
@@ -2568,12 +2720,13 @@ def test_post_object_condition_is_case_sensitive():
 
     signature = base64.b64encode(hmac.new(bytes(aws_secret_access_key, 'utf-8'), policy, hashlib.sha1).digest())
 
-    payload = OrderedDict([ ("key", "foo.txt"),("AWSAccessKeyId" , aws_access_key_id),\
-    ("acl" , "private"),("signature" , signature),("policy" , policy),\
-    ("Content-Type" , "text/plain"),('file', ('bar'))])
+    payload = OrderedDict([("key", "foo.txt"), ("AWSAccessKeyId", aws_access_key_id), \
+                           ("acl", "private"), ("signature", signature), ("policy", policy), \
+                           ("Content-Type", "text/plain"), ('file', ('bar'))])
 
     r = requests.post(url, files=payload, verify=get_config_ssl_verify())
     assert r.status_code == 400
+
 
 def test_post_object_expires_is_case_sensitive():
     bucket_name = get_new_bucket()
@@ -2583,15 +2736,15 @@ def test_post_object_expires_is_case_sensitive():
     utc = pytz.utc
     expires = datetime.datetime.now(utc) + datetime.timedelta(seconds=+6000)
 
-    policy_document = {"EXPIRATION": expires.strftime("%Y-%m-%dT%H:%M:%SZ"),\
-    "conditions": [\
-    {"bucket": bucket_name},\
-    ["starts-with", "$key", "foo"],\
-    {"acl": "private"},\
-    ["starts-with", "$Content-Type", "text/plain"],\
-    ["content-length-range", 0, 1024],\
-    ]\
-    }
+    policy_document = {"EXPIRATION": expires.strftime("%Y-%m-%dT%H:%M:%SZ"), \
+                       "conditions": [ \
+                           {"bucket": bucket_name}, \
+                           ["starts-with", "$key", "foo"], \
+                           {"acl": "private"}, \
+                           ["starts-with", "$Content-Type", "text/plain"], \
+                           ["content-length-range", 0, 1024], \
+                           ] \
+                       }
 
     json_policy_document = json.JSONEncoder().encode(policy_document)
     bytes_json_policy_document = bytes(json_policy_document, 'utf-8')
@@ -2601,12 +2754,13 @@ def test_post_object_expires_is_case_sensitive():
 
     signature = base64.b64encode(hmac.new(bytes(aws_secret_access_key, 'utf-8'), policy, hashlib.sha1).digest())
 
-    payload = OrderedDict([ ("key", "foo.txt"),("AWSAccessKeyId" , aws_access_key_id),\
-    ("acl" , "private"),("signature" , signature),("policy" , policy),\
-    ("Content-Type" , "text/plain"),('file', ('bar'))])
+    payload = OrderedDict([("key", "foo.txt"), ("AWSAccessKeyId", aws_access_key_id), \
+                           ("acl", "private"), ("signature", signature), ("policy", policy), \
+                           ("Content-Type", "text/plain"), ('file', ('bar'))])
 
     r = requests.post(url, files=payload, verify=get_config_ssl_verify())
     assert r.status_code == 400
+
 
 def test_post_object_expired_policy():
     bucket_name = get_new_bucket()
@@ -2616,15 +2770,15 @@ def test_post_object_expired_policy():
     utc = pytz.utc
     expires = datetime.datetime.now(utc) + datetime.timedelta(seconds=-6000)
 
-    policy_document = {"expiration": expires.strftime("%Y-%m-%dT%H:%M:%SZ"),\
-    "conditions": [\
-    {"bucket": bucket_name},\
-    ["starts-with", "$key", "foo"],\
-    {"acl": "private"},\
-    ["starts-with", "$Content-Type", "text/plain"],\
-    ["content-length-range", 0, 1024],\
-    ]\
-    }
+    policy_document = {"expiration": expires.strftime("%Y-%m-%dT%H:%M:%SZ"), \
+                       "conditions": [ \
+                           {"bucket": bucket_name}, \
+                           ["starts-with", "$key", "foo"], \
+                           {"acl": "private"}, \
+                           ["starts-with", "$Content-Type", "text/plain"], \
+                           ["content-length-range", 0, 1024], \
+                           ] \
+                       }
 
     json_policy_document = json.JSONEncoder().encode(policy_document)
     bytes_json_policy_document = bytes(json_policy_document, 'utf-8')
@@ -2634,12 +2788,13 @@ def test_post_object_expired_policy():
 
     signature = base64.b64encode(hmac.new(bytes(aws_secret_access_key, 'utf-8'), policy, hashlib.sha1).digest())
 
-    payload = OrderedDict([ ("key", "foo.txt"),("AWSAccessKeyId" , aws_access_key_id),\
-    ("acl" , "private"),("signature" , signature),("policy" , policy),\
-    ("Content-Type" , "text/plain"),('file', ('bar'))])
+    payload = OrderedDict([("key", "foo.txt"), ("AWSAccessKeyId", aws_access_key_id), \
+                           ("acl", "private"), ("signature", signature), ("policy", policy), \
+                           ("Content-Type", "text/plain"), ('file', ('bar'))])
 
     r = requests.post(url, files=payload, verify=get_config_ssl_verify())
     assert r.status_code == 403
+
 
 def test_post_object_wrong_bucket():
     bucket_name = get_new_bucket()
@@ -2648,15 +2803,15 @@ def test_post_object_wrong_bucket():
     utc = pytz.utc
     expires = datetime.datetime.now(utc) + datetime.timedelta(seconds=+6000)
 
-    policy_document = {"expiration": expires.strftime("%Y-%m-%dT%H:%M:%SZ"),\
-    "conditions": [\
-    {"bucket": bucket_name},\
-    ["starts-with", "$key", "foo"],\
-    {"acl": "private"},\
-    ["starts-with", "$Content-Type", "text/plain"],\
-    ["content-length-range", 0, 1024]\
-    ]\
-    }
+    policy_document = {"expiration": expires.strftime("%Y-%m-%dT%H:%M:%SZ"), \
+                       "conditions": [ \
+                           {"bucket": bucket_name}, \
+                           ["starts-with", "$key", "foo"], \
+                           {"acl": "private"}, \
+                           ["starts-with", "$Content-Type", "text/plain"], \
+                           ["content-length-range", 0, 1024] \
+                           ] \
+                       }
 
     json_policy_document = json.JSONEncoder().encode(policy_document)
     bytes_json_policy_document = bytes(json_policy_document, 'utf-8')
@@ -2666,16 +2821,17 @@ def test_post_object_wrong_bucket():
 
     signature = base64.b64encode(hmac.new(bytes(aws_secret_access_key, 'utf-8'), policy, hashlib.sha1).digest())
 
-    payload = OrderedDict([ ("key" , "${filename}"),('bucket', bucket_name),\
-    ("AWSAccessKeyId" , aws_access_key_id),\
-    ("acl" , "private"),("signature" , signature),("policy" , policy),\
-    ("Content-Type" , "text/plain"),('file', ('foo.txt', 'bar'))])
+    payload = OrderedDict([("key", "${filename}"), ('bucket', bucket_name), \
+                           ("AWSAccessKeyId", aws_access_key_id), \
+                           ("acl", "private"), ("signature", signature), ("policy", policy), \
+                           ("Content-Type", "text/plain"), ('file', ('foo.txt', 'bar'))])
 
     bad_bucket_name = get_new_bucket()
     url = _get_post_url(bad_bucket_name)
 
     r = requests.post(url, files=payload, verify=get_config_ssl_verify())
     assert r.status_code == 403
+
 
 def test_post_object_invalid_request_field_value():
     bucket_name = get_new_bucket()
@@ -2685,16 +2841,16 @@ def test_post_object_invalid_request_field_value():
     utc = pytz.utc
     expires = datetime.datetime.now(utc) + datetime.timedelta(seconds=+6000)
 
-    policy_document = {"expiration": expires.strftime("%Y-%m-%dT%H:%M:%SZ"),\
-    "conditions": [\
-    {"bucket": bucket_name},\
-    ["starts-with", "$key", "foo"],\
-    {"acl": "private"},\
-    ["starts-with", "$Content-Type", "text/plain"],\
-    ["content-length-range", 0, 1024],\
-    ["eq", "$x-amz-meta-foo",  ""]
-    ]\
-    }
+    policy_document = {"expiration": expires.strftime("%Y-%m-%dT%H:%M:%SZ"), \
+                       "conditions": [ \
+                           {"bucket": bucket_name}, \
+                           ["starts-with", "$key", "foo"], \
+                           {"acl": "private"}, \
+                           ["starts-with", "$Content-Type", "text/plain"], \
+                           ["content-length-range", 0, 1024], \
+                           ["eq", "$x-amz-meta-foo", ""]
+                       ] \
+                       }
 
     json_policy_document = json.JSONEncoder().encode(policy_document)
     bytes_json_policy_document = bytes(json_policy_document, 'utf-8')
@@ -2703,12 +2859,13 @@ def test_post_object_invalid_request_field_value():
     aws_access_key_id = get_main_aws_access_key()
 
     signature = base64.b64encode(hmac.new(bytes(aws_secret_access_key, 'utf-8'), policy, hashlib.sha1).digest())
-    payload = OrderedDict([ ("key" , "foo.txt"),("AWSAccessKeyId" , aws_access_key_id),\
-    ("acl" , "private"),("signature" , signature),("policy" , policy),\
-    ("Content-Type" , "text/plain"),('x-amz-meta-foo' , 'barclamp'),('file', ('bar'))])
+    payload = OrderedDict([("key", "foo.txt"), ("AWSAccessKeyId", aws_access_key_id), \
+                           ("acl", "private"), ("signature", signature), ("policy", policy), \
+                           ("Content-Type", "text/plain"), ('x-amz-meta-foo', 'barclamp'), ('file', ('bar'))])
 
     r = requests.post(url, files=payload, verify=get_config_ssl_verify())
     assert r.status_code == 403
+
 
 def test_post_object_missing_expires_condition():
     bucket_name = get_new_bucket()
@@ -2718,15 +2875,15 @@ def test_post_object_missing_expires_condition():
     utc = pytz.utc
     expires = datetime.datetime.now(utc) + datetime.timedelta(seconds=+6000)
 
-    policy_document = {\
-    "conditions": [\
-    {"bucket": bucket_name},\
-    ["starts-with", "$key", "foo"],\
-    {"acl": "private"},\
-    ["starts-with", "$Content-Type", "text/plain"],\
-    ["content-length-range", 0, 1024],\
-    ]\
-    }
+    policy_document = { \
+        "conditions": [ \
+            {"bucket": bucket_name}, \
+            ["starts-with", "$key", "foo"], \
+            {"acl": "private"}, \
+            ["starts-with", "$Content-Type", "text/plain"], \
+            ["content-length-range", 0, 1024], \
+            ] \
+        }
 
     json_policy_document = json.JSONEncoder().encode(policy_document)
     bytes_json_policy_document = bytes(json_policy_document, 'utf-8')
@@ -2736,12 +2893,13 @@ def test_post_object_missing_expires_condition():
 
     signature = base64.b64encode(hmac.new(bytes(aws_secret_access_key, 'utf-8'), policy, hashlib.sha1).digest())
 
-    payload = OrderedDict([ ("key" , "foo.txt"),("AWSAccessKeyId" , aws_access_key_id),\
-    ("acl" , "private"),("signature" , signature),("policy" , policy),\
-    ("Content-Type" , "text/plain"),('file', ('bar'))])
+    payload = OrderedDict([("key", "foo.txt"), ("AWSAccessKeyId", aws_access_key_id), \
+                           ("acl", "private"), ("signature", signature), ("policy", policy), \
+                           ("Content-Type", "text/plain"), ('file', ('bar'))])
 
     r = requests.post(url, files=payload, verify=get_config_ssl_verify())
     assert r.status_code == 400
+
 
 def test_post_object_missing_conditions_list():
     bucket_name = get_new_bucket()
@@ -2761,12 +2919,13 @@ def test_post_object_missing_conditions_list():
 
     signature = base64.b64encode(hmac.new(bytes(aws_secret_access_key, 'utf-8'), policy, hashlib.sha1).digest())
 
-    payload = OrderedDict([ ("key" , "foo.txt"),("AWSAccessKeyId" , aws_access_key_id),\
-    ("acl" , "private"),("signature" , signature),("policy" , policy),\
-    ("Content-Type" , "text/plain"),('file', ('bar'))])
+    payload = OrderedDict([("key", "foo.txt"), ("AWSAccessKeyId", aws_access_key_id), \
+                           ("acl", "private"), ("signature", signature), ("policy", policy), \
+                           ("Content-Type", "text/plain"), ('file', ('bar'))])
 
     r = requests.post(url, files=payload, verify=get_config_ssl_verify())
     assert r.status_code == 400
+
 
 def test_post_object_upload_size_limit_exceeded():
     bucket_name = get_new_bucket()
@@ -2776,15 +2935,15 @@ def test_post_object_upload_size_limit_exceeded():
     utc = pytz.utc
     expires = datetime.datetime.now(utc) + datetime.timedelta(seconds=+6000)
 
-    policy_document = {"expiration": expires.strftime("%Y-%m-%dT%H:%M:%SZ"),\
-    "conditions": [\
-    {"bucket": bucket_name},\
-    ["starts-with", "$key", "foo"],\
-    {"acl": "private"},\
-    ["starts-with", "$Content-Type", "text/plain"],\
-    ["content-length-range", 0, 0],\
-    ]\
-    }
+    policy_document = {"expiration": expires.strftime("%Y-%m-%dT%H:%M:%SZ"), \
+                       "conditions": [ \
+                           {"bucket": bucket_name}, \
+                           ["starts-with", "$key", "foo"], \
+                           {"acl": "private"}, \
+                           ["starts-with", "$Content-Type", "text/plain"], \
+                           ["content-length-range", 0, 0], \
+                           ] \
+                       }
 
     json_policy_document = json.JSONEncoder().encode(policy_document)
     bytes_json_policy_document = bytes(json_policy_document, 'utf-8')
@@ -2794,12 +2953,13 @@ def test_post_object_upload_size_limit_exceeded():
 
     signature = base64.b64encode(hmac.new(bytes(aws_secret_access_key, 'utf-8'), policy, hashlib.sha1).digest())
 
-    payload = OrderedDict([ ("key" , "foo.txt"),("AWSAccessKeyId" , aws_access_key_id),\
-    ("acl" , "private"),("signature" , signature),("policy" , policy),\
-    ("Content-Type" , "text/plain"),('file', ('bar'))])
+    payload = OrderedDict([("key", "foo.txt"), ("AWSAccessKeyId", aws_access_key_id), \
+                           ("acl", "private"), ("signature", signature), ("policy", policy), \
+                           ("Content-Type", "text/plain"), ('file', ('bar'))])
 
     r = requests.post(url, files=payload, verify=get_config_ssl_verify())
     assert r.status_code == 400
+
 
 def test_post_object_missing_content_length_argument():
     bucket_name = get_new_bucket()
@@ -2809,15 +2969,15 @@ def test_post_object_missing_content_length_argument():
     utc = pytz.utc
     expires = datetime.datetime.now(utc) + datetime.timedelta(seconds=+6000)
 
-    policy_document = {"expiration": expires.strftime("%Y-%m-%dT%H:%M:%SZ"),\
-    "conditions": [\
-    {"bucket": bucket_name},\
-    ["starts-with", "$key", "foo"],\
-    {"acl": "private"},\
-    ["starts-with", "$Content-Type", "text/plain"],\
-    ["content-length-range", 0],\
-    ]\
-    }
+    policy_document = {"expiration": expires.strftime("%Y-%m-%dT%H:%M:%SZ"), \
+                       "conditions": [ \
+                           {"bucket": bucket_name}, \
+                           ["starts-with", "$key", "foo"], \
+                           {"acl": "private"}, \
+                           ["starts-with", "$Content-Type", "text/plain"], \
+                           ["content-length-range", 0], \
+                           ] \
+                       }
 
     json_policy_document = json.JSONEncoder().encode(policy_document)
     bytes_json_policy_document = bytes(json_policy_document, 'utf-8')
@@ -2827,12 +2987,13 @@ def test_post_object_missing_content_length_argument():
 
     signature = base64.b64encode(hmac.new(bytes(aws_secret_access_key, 'utf-8'), policy, hashlib.sha1).digest())
 
-    payload = OrderedDict([ ("key" , "foo.txt"),("AWSAccessKeyId" , aws_access_key_id),\
-    ("acl" , "private"),("signature" , signature),("policy" , policy),\
-    ("Content-Type" , "text/plain"),('file', ('bar'))])
+    payload = OrderedDict([("key", "foo.txt"), ("AWSAccessKeyId", aws_access_key_id), \
+                           ("acl", "private"), ("signature", signature), ("policy", policy), \
+                           ("Content-Type", "text/plain"), ('file', ('bar'))])
 
     r = requests.post(url, files=payload, verify=get_config_ssl_verify())
     assert r.status_code == 400
+
 
 def test_post_object_invalid_content_length_argument():
     bucket_name = get_new_bucket()
@@ -2842,15 +3003,15 @@ def test_post_object_invalid_content_length_argument():
     utc = pytz.utc
     expires = datetime.datetime.now(utc) + datetime.timedelta(seconds=+6000)
 
-    policy_document = {"expiration": expires.strftime("%Y-%m-%dT%H:%M:%SZ"),\
-    "conditions": [\
-    {"bucket": bucket_name},\
-    ["starts-with", "$key", "foo"],\
-    {"acl": "private"},\
-    ["starts-with", "$Content-Type", "text/plain"],\
-    ["content-length-range", -1, 0],\
-    ]\
-    }
+    policy_document = {"expiration": expires.strftime("%Y-%m-%dT%H:%M:%SZ"), \
+                       "conditions": [ \
+                           {"bucket": bucket_name}, \
+                           ["starts-with", "$key", "foo"], \
+                           {"acl": "private"}, \
+                           ["starts-with", "$Content-Type", "text/plain"], \
+                           ["content-length-range", -1, 0], \
+                           ] \
+                       }
 
     json_policy_document = json.JSONEncoder().encode(policy_document)
     bytes_json_policy_document = bytes(json_policy_document, 'utf-8')
@@ -2860,12 +3021,13 @@ def test_post_object_invalid_content_length_argument():
 
     signature = base64.b64encode(hmac.new(bytes(aws_secret_access_key, 'utf-8'), policy, hashlib.sha1).digest())
 
-    payload = OrderedDict([ ("key" , "foo.txt"),("AWSAccessKeyId" , aws_access_key_id),\
-    ("acl" , "private"),("signature" , signature),("policy" , policy),\
-    ("Content-Type" , "text/plain"),('file', ('bar'))])
+    payload = OrderedDict([("key", "foo.txt"), ("AWSAccessKeyId", aws_access_key_id), \
+                           ("acl", "private"), ("signature", signature), ("policy", policy), \
+                           ("Content-Type", "text/plain"), ('file', ('bar'))])
 
     r = requests.post(url, files=payload, verify=get_config_ssl_verify())
     assert r.status_code == 400
+
 
 def test_post_object_upload_size_below_minimum():
     bucket_name = get_new_bucket()
@@ -2875,15 +3037,15 @@ def test_post_object_upload_size_below_minimum():
     utc = pytz.utc
     expires = datetime.datetime.now(utc) + datetime.timedelta(seconds=+6000)
 
-    policy_document = {"expiration": expires.strftime("%Y-%m-%dT%H:%M:%SZ"),\
-    "conditions": [\
-    {"bucket": bucket_name},\
-    ["starts-with", "$key", "foo"],\
-    {"acl": "private"},\
-    ["starts-with", "$Content-Type", "text/plain"],\
-    ["content-length-range", 512, 1000],\
-    ]\
-    }
+    policy_document = {"expiration": expires.strftime("%Y-%m-%dT%H:%M:%SZ"), \
+                       "conditions": [ \
+                           {"bucket": bucket_name}, \
+                           ["starts-with", "$key", "foo"], \
+                           {"acl": "private"}, \
+                           ["starts-with", "$Content-Type", "text/plain"], \
+                           ["content-length-range", 512, 1000], \
+                           ] \
+                       }
 
     json_policy_document = json.JSONEncoder().encode(policy_document)
     bytes_json_policy_document = bytes(json_policy_document, 'utf-8')
@@ -2893,22 +3055,23 @@ def test_post_object_upload_size_below_minimum():
 
     signature = base64.b64encode(hmac.new(bytes(aws_secret_access_key, 'utf-8'), policy, hashlib.sha1).digest())
 
-    payload = OrderedDict([ ("key" , "foo.txt"),("AWSAccessKeyId" , aws_access_key_id),\
-    ("acl" , "private"),("signature" , signature),("policy" , policy),\
-    ("Content-Type" , "text/plain"),('file', ('bar'))])
+    payload = OrderedDict([("key", "foo.txt"), ("AWSAccessKeyId", aws_access_key_id), \
+                           ("acl", "private"), ("signature", signature), ("policy", policy), \
+                           ("Content-Type", "text/plain"), ('file', ('bar'))])
 
     r = requests.post(url, files=payload, verify=get_config_ssl_verify())
     assert r.status_code == 400
+
 
 def test_post_object_upload_size_rgw_chunk_size_bug():
     # Test for https://tracker.ceph.com/issues/58627
     # TODO: if this value is different in Teuthology runs, this would need tuning
     # https://github.com/ceph/ceph/blob/main/qa/suites/rgw/verify/striping%24/stripe-greater-than-chunk.yaml
-    _rgw_max_chunk_size = 4 * 2**20 # 4MiB
+    _rgw_max_chunk_size = 4 * 2 ** 20  # 4MiB
     min_size = _rgw_max_chunk_size
     max_size = _rgw_max_chunk_size * 3
     # [(chunk),(small)]
-    test_payload_size = _rgw_max_chunk_size + 200 # extra bit to push it over the chunk boundary
+    test_payload_size = _rgw_max_chunk_size + 200  # extra bit to push it over the chunk boundary
     # it should be valid when we run this test!
     assert test_payload_size > min_size
     assert test_payload_size < max_size
@@ -2920,15 +3083,15 @@ def test_post_object_upload_size_rgw_chunk_size_bug():
     utc = pytz.utc
     expires = datetime.datetime.now(utc) + datetime.timedelta(seconds=+6000)
 
-    policy_document = {"expiration": expires.strftime("%Y-%m-%dT%H:%M:%SZ"),\
-    "conditions": [\
-    {"bucket": bucket_name},\
-    ["starts-with", "$key", "foo"],\
-    {"acl": "private"},\
-    ["starts-with", "$Content-Type", "text/plain"],\
-    ["content-length-range", min_size, max_size],\
-    ]\
-    }
+    policy_document = {"expiration": expires.strftime("%Y-%m-%dT%H:%M:%SZ"), \
+                       "conditions": [ \
+                           {"bucket": bucket_name}, \
+                           ["starts-with", "$key", "foo"], \
+                           {"acl": "private"}, \
+                           ["starts-with", "$Content-Type", "text/plain"], \
+                           ["content-length-range", min_size, max_size], \
+                           ] \
+                       }
 
     test_payload = 'x' * test_payload_size
 
@@ -2940,12 +3103,13 @@ def test_post_object_upload_size_rgw_chunk_size_bug():
 
     signature = base64.b64encode(hmac.new(bytes(aws_secret_access_key, 'utf-8'), policy, hashlib.sha1).digest())
 
-    payload = OrderedDict([ ("key" , "foo.txt"),("AWSAccessKeyId" , aws_access_key_id),\
-    ("acl" , "private"),("signature" , signature),("policy" , policy),\
-    ("Content-Type" , "text/plain"),('file', (test_payload))])
+    payload = OrderedDict([("key", "foo.txt"), ("AWSAccessKeyId", aws_access_key_id), \
+                           ("acl", "private"), ("signature", signature), ("policy", policy), \
+                           ("Content-Type", "text/plain"), ('file', (test_payload))])
 
     r = requests.post(url, files=payload, verify=get_config_ssl_verify())
     assert r.status_code == 204
+
 
 def test_post_object_empty_conditions():
     bucket_name = get_new_bucket()
@@ -2955,11 +3119,11 @@ def test_post_object_empty_conditions():
     utc = pytz.utc
     expires = datetime.datetime.now(utc) + datetime.timedelta(seconds=+6000)
 
-    policy_document = {"expiration": expires.strftime("%Y-%m-%dT%H:%M:%SZ"),\
-    "conditions": [\
-    { }\
-    ]\
-    }
+    policy_document = {"expiration": expires.strftime("%Y-%m-%dT%H:%M:%SZ"), \
+                       "conditions": [ \
+                           {} \
+                           ] \
+                       }
 
     json_policy_document = json.JSONEncoder().encode(policy_document)
     bytes_json_policy_document = bytes(json_policy_document, 'utf-8')
@@ -2969,12 +3133,13 @@ def test_post_object_empty_conditions():
 
     signature = base64.b64encode(hmac.new(bytes(aws_secret_access_key, 'utf-8'), policy, hashlib.sha1).digest())
 
-    payload = OrderedDict([ ("key" , "foo.txt"),("AWSAccessKeyId" , aws_access_key_id),\
-    ("acl" , "private"),("signature" , signature),("policy" , policy),\
-    ("Content-Type" , "text/plain"),('file', ('bar'))])
+    payload = OrderedDict([("key", "foo.txt"), ("AWSAccessKeyId", aws_access_key_id), \
+                           ("acl", "private"), ("signature", signature), ("policy", policy), \
+                           ("Content-Type", "text/plain"), ('file', ('bar'))])
 
     r = requests.post(url, files=payload, verify=get_config_ssl_verify())
     assert r.status_code == 400
+
 
 def test_get_object_ifmatch_good():
     bucket_name = get_new_bucket()
@@ -2986,6 +3151,7 @@ def test_get_object_ifmatch_good():
     body = _get_body(response)
     assert body == 'bar'
 
+
 def test_get_object_ifmatch_failed():
     bucket_name = get_new_bucket()
     client = get_client()
@@ -2995,6 +3161,7 @@ def test_get_object_ifmatch_failed():
     status, error_code = _get_status_and_error_code(e.response)
     assert status == 412
     assert error_code == 'PreconditionFailed'
+
 
 def test_get_object_ifnonematch_good():
     bucket_name = get_new_bucket()
@@ -3007,6 +3174,7 @@ def test_get_object_ifnonematch_good():
     assert status == 304
     assert e.response['Error']['Message'] == 'Not Modified'
 
+
 def test_get_object_ifnonematch_failed():
     bucket_name = get_new_bucket()
     client = get_client()
@@ -3016,6 +3184,7 @@ def test_get_object_ifnonematch_failed():
     body = _get_body(response)
     assert body == 'bar'
 
+
 def test_get_object_ifmodifiedsince_good():
     bucket_name = get_new_bucket()
     client = get_client()
@@ -3024,6 +3193,7 @@ def test_get_object_ifmodifiedsince_good():
     response = client.get_object(Bucket=bucket_name, Key='foo', IfModifiedSince='Sat, 29 Oct 1994 19:43:31 GMT')
     body = _get_body(response)
     assert body == 'bar'
+
 
 @pytest.mark.fails_on_dbstore
 def test_get_object_ifmodifiedsince_failed():
@@ -3046,16 +3216,19 @@ def test_get_object_ifmodifiedsince_failed():
     assert status == 304
     assert e.response['Error']['Message'] == 'Not Modified'
 
+
 @pytest.mark.fails_on_dbstore
 def test_get_object_ifunmodifiedsince_good():
     bucket_name = get_new_bucket()
     client = get_client()
     client.put_object(Bucket=bucket_name, Key='foo', Body='bar')
 
-    e = assert_raises(ClientError, client.get_object, Bucket=bucket_name, Key='foo', IfUnmodifiedSince='Sat, 29 Oct 1994 19:43:31 GMT')
+    e = assert_raises(ClientError, client.get_object, Bucket=bucket_name, Key='foo',
+                      IfUnmodifiedSince='Sat, 29 Oct 1994 19:43:31 GMT')
     status, error_code = _get_status_and_error_code(e.response)
     assert status == 412
     assert error_code == 'PreconditionFailed'
+
 
 def test_get_object_ifunmodifiedsince_failed():
     bucket_name = get_new_bucket()
@@ -3082,11 +3255,12 @@ def test_put_object_ifmatch_good():
     # pass in custom header 'If-Match' before PutObject call
     lf = (lambda **kwargs: kwargs['params']['headers'].update({'If-Match': etag}))
     client.meta.events.register('before-call.s3.PutObject', lf)
-    response = client.put_object(Bucket=bucket_name,Key='foo', Body='zar')
+    response = client.put_object(Bucket=bucket_name, Key='foo', Body='zar')
 
     response = client.get_object(Bucket=bucket_name, Key='foo')
     body = _get_body(response)
     assert body == 'zar'
+
 
 @pytest.mark.fails_on_dbstore
 def test_put_object_ifmatch_failed():
@@ -3110,6 +3284,7 @@ def test_put_object_ifmatch_failed():
     body = _get_body(response)
     assert body == 'bar'
 
+
 @pytest.mark.fails_on_aws
 def test_put_object_ifmatch_overwrite_existed_good():
     bucket_name = get_new_bucket()
@@ -3121,11 +3296,12 @@ def test_put_object_ifmatch_overwrite_existed_good():
 
     lf = (lambda **kwargs: kwargs['params']['headers'].update({'If-Match': '*'}))
     client.meta.events.register('before-call.s3.PutObject', lf)
-    response = client.put_object(Bucket=bucket_name,Key='foo', Body='zar')
+    response = client.put_object(Bucket=bucket_name, Key='foo', Body='zar')
 
     response = client.get_object(Bucket=bucket_name, Key='foo')
     body = _get_body(response)
     assert body == 'zar'
+
 
 @pytest.mark.fails_on_aws
 @pytest.mark.fails_on_dbstore
@@ -3145,6 +3321,7 @@ def test_put_object_ifmatch_nonexisted_failed():
     assert status == 404
     assert error_code == 'NoSuchKey'
 
+
 @pytest.mark.fails_on_aws
 def test_put_object_ifnonmatch_good():
     bucket_name = get_new_bucket()
@@ -3156,11 +3333,12 @@ def test_put_object_ifnonmatch_good():
 
     lf = (lambda **kwargs: kwargs['params']['headers'].update({'If-None-Match': 'ABCORZ'}))
     client.meta.events.register('before-call.s3.PutObject', lf)
-    response = client.put_object(Bucket=bucket_name,Key='foo', Body='zar')
+    response = client.put_object(Bucket=bucket_name, Key='foo', Body='zar')
 
     response = client.get_object(Bucket=bucket_name, Key='foo')
     body = _get_body(response)
     assert body == 'zar'
+
 
 @pytest.mark.fails_on_aws
 @pytest.mark.fails_on_dbstore
@@ -3187,6 +3365,7 @@ def test_put_object_ifnonmatch_failed():
     body = _get_body(response)
     assert body == 'bar'
 
+
 @pytest.mark.fails_on_aws
 def test_put_object_ifnonmatch_nonexisted_good():
     bucket_name = get_new_bucket()
@@ -3199,6 +3378,7 @@ def test_put_object_ifnonmatch_nonexisted_good():
     response = client.get_object(Bucket=bucket_name, Key='foo')
     body = _get_body(response)
     assert body == 'bar'
+
 
 @pytest.mark.fails_on_aws
 @pytest.mark.fails_on_dbstore
@@ -3223,6 +3403,7 @@ def test_put_object_ifnonmatch_overwrite_existed_failed():
     body = _get_body(response)
     assert body == 'bar'
 
+
 def _setup_bucket_object_acl(bucket_acl, object_acl, client=None):
     """
     add a foo key, and specified key and bucket acls to
@@ -3236,6 +3417,7 @@ def _setup_bucket_object_acl(bucket_acl, object_acl, client=None):
 
     return bucket_name
 
+
 def _setup_bucket_acl(bucket_acl=None):
     """
     set up a new bucket with specified acl
@@ -3246,12 +3428,14 @@ def _setup_bucket_acl(bucket_acl=None):
 
     return bucket_name
 
+
 def test_object_raw_get():
     bucket_name = _setup_bucket_object_acl('public-read', 'public-read')
 
     unauthenticated_client = get_unauthenticated_client()
     response = unauthenticated_client.get_object(Bucket=bucket_name, Key='foo')
     assert response['ResponseMetadata']['HTTPStatusCode'] == 200
+
 
 def test_object_raw_get_bucket_gone():
     bucket_name = _setup_bucket_object_acl('public-read', 'public-read')
@@ -3267,6 +3451,7 @@ def test_object_raw_get_bucket_gone():
     assert status == 404
     assert error_code == 'NoSuchBucket'
 
+
 def test_object_delete_key_bucket_gone():
     bucket_name = _setup_bucket_object_acl('public-read', 'public-read')
     client = get_client()
@@ -3281,6 +3466,7 @@ def test_object_delete_key_bucket_gone():
     assert status == 404
     assert error_code == 'NoSuchBucket'
 
+
 def test_object_raw_get_object_gone():
     bucket_name = _setup_bucket_object_acl('public-read', 'public-read')
     client = get_client()
@@ -3294,12 +3480,14 @@ def test_object_raw_get_object_gone():
     assert status == 404
     assert error_code == 'NoSuchKey'
 
+
 def test_bucket_head():
     bucket_name = get_new_bucket()
     client = get_client()
 
     response = client.head_bucket(Bucket=bucket_name)
     assert response['ResponseMetadata']['HTTPStatusCode'] == 200
+
 
 def test_bucket_head_notexist():
     bucket_name = get_new_bucket_name()
@@ -3312,7 +3500,8 @@ def test_bucket_head_notexist():
     # n.b., RGW does not send a response document for this operation,
     # which seems consistent with
     # https://docs.aws.amazon.com/AmazonS3/latest/API/API_HeadBucket.html
-    #assert error_code == 'NoSuchKey'
+    # assert error_code == 'NoSuchKey'
+
 
 @pytest.mark.fails_on_aws
 @pytest.mark.fails_on_dbstore
@@ -3324,11 +3513,12 @@ def test_bucket_head_extended():
     assert int(response['ResponseMetadata']['HTTPHeaders']['x-rgw-object-count']) == 0
     assert int(response['ResponseMetadata']['HTTPHeaders']['x-rgw-bytes-used']) == 0
 
-    _create_objects(bucket_name=bucket_name, keys=['foo','bar','baz'])
+    _create_objects(bucket_name=bucket_name, keys=['foo', 'bar', 'baz'])
     response = client.head_bucket(Bucket=bucket_name)
 
     assert int(response['ResponseMetadata']['HTTPHeaders']['x-rgw-object-count']) == 3
     assert int(response['ResponseMetadata']['HTTPHeaders']['x-rgw-bytes-used']) == 9
+
 
 def test_object_raw_get_bucket_acl():
     bucket_name = _setup_bucket_object_acl('private', 'public-read')
@@ -3336,6 +3526,7 @@ def test_object_raw_get_bucket_acl():
     unauthenticated_client = get_unauthenticated_client()
     response = unauthenticated_client.get_object(Bucket=bucket_name, Key='foo')
     assert response['ResponseMetadata']['HTTPStatusCode'] == 200
+
 
 def test_object_raw_get_object_acl():
     bucket_name = _setup_bucket_object_acl('public-read', 'private')
@@ -3346,6 +3537,7 @@ def test_object_raw_get_object_acl():
     assert status == 403
     assert error_code == 'AccessDenied'
 
+
 def test_object_put_acl_mtime():
     key = 'foo'
     bucket_name = get_new_bucket()
@@ -3355,33 +3547,34 @@ def test_object_put_acl_mtime():
 
     content = 'foooz'
     client.put_object(Bucket=bucket_name, Key=key, Body=content)
-    
+
     obj_response = client.head_object(Bucket=bucket_name, Key=key)
     create_mtime = obj_response['LastModified']
 
-    response  = client.list_objects(Bucket=bucket_name)
+    response = client.list_objects(Bucket=bucket_name)
     obj_list = response['Contents'][0]
-    _compare_dates(obj_list['LastModified'],create_mtime)
+    _compare_dates(obj_list['LastModified'], create_mtime)
 
-    response  = client.list_object_versions(Bucket=bucket_name)
+    response = client.list_object_versions(Bucket=bucket_name)
     obj_list = response['Versions'][0]
-    _compare_dates(obj_list['LastModified'],create_mtime)
+    _compare_dates(obj_list['LastModified'], create_mtime)
 
     # set acl
     time.sleep(2)
-    client.put_object_acl(ACL='private',Bucket=bucket_name, Key=key)
-    
+    client.put_object_acl(ACL='private', Bucket=bucket_name, Key=key)
+
     # mtime should match with create mtime
     obj_response = client.head_object(Bucket=bucket_name, Key=key)
-    _compare_dates(create_mtime,obj_response['LastModified'])
+    _compare_dates(create_mtime, obj_response['LastModified'])
 
-    response  = client.list_objects(Bucket=bucket_name)
+    response = client.list_objects(Bucket=bucket_name)
     obj_list = response['Contents'][0]
-    _compare_dates(obj_list['LastModified'],create_mtime)
+    _compare_dates(obj_list['LastModified'], create_mtime)
 
-    response  = client.list_object_versions(Bucket=bucket_name)
+    response = client.list_object_versions(Bucket=bucket_name)
     obj_list = response['Versions'][0]
-    _compare_dates(obj_list['LastModified'],create_mtime)
+    _compare_dates(obj_list['LastModified'], create_mtime)
+
 
 def test_object_raw_authenticated():
     bucket_name = _setup_bucket_object_acl('public-read', 'public-read')
@@ -3390,18 +3583,23 @@ def test_object_raw_authenticated():
     response = client.get_object(Bucket=bucket_name, Key='foo')
     assert response['ResponseMetadata']['HTTPStatusCode'] == 200
 
+
 def test_object_raw_response_headers():
     bucket_name = _setup_bucket_object_acl('private', 'private')
 
     client = get_client()
 
-    response = client.get_object(Bucket=bucket_name, Key='foo', ResponseCacheControl='no-cache', ResponseContentDisposition='bla', ResponseContentEncoding='aaa', ResponseContentLanguage='esperanto', ResponseContentType='foo/bar', ResponseExpires='123')
+    response = client.get_object(Bucket=bucket_name, Key='foo', ResponseCacheControl='no-cache',
+                                 ResponseContentDisposition='bla', ResponseContentEncoding='aaa',
+                                 ResponseContentLanguage='esperanto', ResponseContentType='foo/bar',
+                                 ResponseExpires='123')
     assert response['ResponseMetadata']['HTTPStatusCode'] == 200
     assert response['ResponseMetadata']['HTTPHeaders']['content-type'] == 'foo/bar'
     assert response['ResponseMetadata']['HTTPHeaders']['content-disposition'] == 'bla'
     assert response['ResponseMetadata']['HTTPHeaders']['content-language'] == 'esperanto'
     assert response['ResponseMetadata']['HTTPHeaders']['content-encoding'] == 'aaa'
     assert response['ResponseMetadata']['HTTPHeaders']['cache-control'] == 'no-cache'
+
 
 def test_object_raw_authenticated_bucket_acl():
     bucket_name = _setup_bucket_object_acl('private', 'public-read')
@@ -3410,12 +3608,14 @@ def test_object_raw_authenticated_bucket_acl():
     response = client.get_object(Bucket=bucket_name, Key='foo')
     assert response['ResponseMetadata']['HTTPStatusCode'] == 200
 
+
 def test_object_raw_authenticated_object_acl():
     bucket_name = _setup_bucket_object_acl('public-read', 'private')
 
     client = get_client()
     response = client.get_object(Bucket=bucket_name, Key='foo')
     assert response['ResponseMetadata']['HTTPStatusCode'] == 200
+
 
 def test_object_raw_authenticated_bucket_gone():
     bucket_name = _setup_bucket_object_acl('public-read', 'public-read')
@@ -3429,6 +3629,7 @@ def test_object_raw_authenticated_bucket_gone():
     assert status == 404
     assert error_code == 'NoSuchBucket'
 
+
 def test_object_raw_authenticated_object_gone():
     bucket_name = _setup_bucket_object_acl('public-read', 'public-read')
     client = get_client()
@@ -3439,6 +3640,7 @@ def test_object_raw_authenticated_object_gone():
     status, error_code = _get_status_and_error_code(e.response)
     assert status == 404
     assert error_code == 'NoSuchKey'
+
 
 def _test_object_raw_get_x_amz_expires_not_expired(client):
     bucket_name = _setup_bucket_object_acl('public-read', 'public-read', client=client)
@@ -3452,11 +3654,14 @@ def _test_object_raw_get_x_amz_expires_not_expired(client):
     res = requests.get(url, verify=get_config_ssl_verify()).__dict__
     assert res['status_code'] == 200
 
+
 def test_object_raw_get_x_amz_expires_not_expired():
     _test_object_raw_get_x_amz_expires_not_expired(client=get_client())
 
+
 def test_object_raw_get_x_amz_expires_not_expired_tenant():
     _test_object_raw_get_x_amz_expires_not_expired(client=get_tenant_client())
+
 
 def test_object_raw_get_x_amz_expires_out_range_zero():
     bucket_name = _setup_bucket_object_acl('public-read', 'public-read')
@@ -3468,6 +3673,7 @@ def test_object_raw_get_x_amz_expires_out_range_zero():
     res = requests.get(url, verify=get_config_ssl_verify()).__dict__
     assert res['status_code'] == 403
 
+
 def test_object_raw_get_x_amz_expires_out_max_range():
     bucket_name = _setup_bucket_object_acl('public-read', 'public-read')
     client = get_client()
@@ -3477,6 +3683,7 @@ def test_object_raw_get_x_amz_expires_out_max_range():
 
     res = requests.get(url, verify=get_config_ssl_verify()).__dict__
     assert res['status_code'] == 403
+
 
 def test_object_raw_get_x_amz_expires_out_positive_range():
     bucket_name = _setup_bucket_object_acl('public-read', 'public-read')
@@ -3502,6 +3709,7 @@ def test_object_anon_put():
     assert status == 403
     assert error_code == 'AccessDenied'
 
+
 def test_object_anon_put_write_access():
     bucket_name = _setup_bucket_acl('public-read-write')
     client = get_client()
@@ -3512,12 +3720,14 @@ def test_object_anon_put_write_access():
     response = unauthenticated_client.put_object(Bucket=bucket_name, Key='foo', Body='foo')
     assert response['ResponseMetadata']['HTTPStatusCode'] == 200
 
+
 def test_object_put_authenticated():
     bucket_name = get_new_bucket()
     client = get_client()
 
     response = client.put_object(Bucket=bucket_name, Key='foo', Body='foo')
     assert response['ResponseMetadata']['HTTPStatusCode'] == 200
+
 
 def test_object_raw_put_authenticated_expired():
     bucket_name = get_new_bucket()
@@ -3530,6 +3740,7 @@ def test_object_raw_put_authenticated_expired():
     # params wouldn't take a 'Body' parameter so we're passing it in here
     res = requests.put(url, data="foo", verify=get_config_ssl_verify()).__dict__
     assert res['status_code'] == 403
+
 
 def check_bad_bucket_name(bucket_name):
     """
@@ -3551,6 +3762,7 @@ def test_bucket_create_naming_bad_starts_nonalpha():
     bucket_name = get_new_bucket_name()
     check_bad_bucket_name('_' + bucket_name)
 
+
 def check_invalid_bucketname(invalid_name):
     """
     Send a create bucket_request with an invalid bucket name
@@ -3560,20 +3772,25 @@ def check_invalid_bucketname(invalid_name):
     """
     client = get_client()
     valid_bucket_name = get_new_bucket_name()
+
     def replace_bucketname_from_url(**kwargs):
         url = kwargs['params']['url']
         new_url = url.replace(valid_bucket_name, invalid_name)
         kwargs['params']['url'] = new_url
+
     client.meta.events.register('before-call.s3.CreateBucket', replace_bucketname_from_url)
     e = assert_raises(ClientError, client.create_bucket, Bucket=invalid_name)
     status, error_code = _get_status_and_error_code(e.response)
     return (status, error_code)
 
+
 def test_bucket_create_naming_bad_short_one():
     check_bad_bucket_name('a')
 
+
 def test_bucket_create_naming_bad_short_two():
     check_bad_bucket_name('aa')
+
 
 def check_good_bucket_name(name, _prefix=None):
     """
@@ -3590,12 +3807,13 @@ def check_good_bucket_name(name, _prefix=None):
     if _prefix is None:
         _prefix = get_prefix()
     bucket_name = '{prefix}{name}'.format(
-            prefix=_prefix,
-            name=name,
-            )
+        prefix=_prefix,
+        name=name,
+    )
     client = get_client()
     response = client.create_bucket(Bucket=bucket_name)
     assert response['ResponseMetadata']['HTTPStatusCode'] == 200
+
 
 def _test_bucket_create_naming_good_long(length):
     """
@@ -3611,15 +3829,16 @@ def _test_bucket_create_naming_good_long(length):
     prefix = get_new_bucket_name()
     assert len(prefix) < 63
     num = length - len(prefix)
-    name=num*'a'
+    name = num * 'a'
 
     bucket_name = '{prefix}{name}'.format(
-            prefix=prefix,
-            name=name,
-            )
+        prefix=prefix,
+        name=name,
+    )
     client = get_client()
     response = client.create_bucket(Bucket=bucket_name)
     assert response['ResponseMetadata']['HTTPStatusCode'] == 200
+
 
 # Breaks DNS with SubdomainCallingFormat
 @pytest.mark.fails_on_aws
@@ -3627,11 +3846,13 @@ def _test_bucket_create_naming_good_long(length):
 def test_bucket_create_naming_good_long_60():
     _test_bucket_create_naming_good_long(60)
 
+
 # Breaks DNS with SubdomainCallingFormat
 @pytest.mark.fails_on_aws
 # Should now pass on AWS even though it has 'fails_on_aws' attr.
 def test_bucket_create_naming_good_long_61():
     _test_bucket_create_naming_good_long(61)
+
 
 # Breaks DNS with SubdomainCallingFormat
 @pytest.mark.fails_on_aws
@@ -3652,21 +3873,23 @@ def test_bucket_list_long_name():
     prefix = get_new_bucket_name()
     length = 61
     num = length - len(prefix)
-    name=num*'a'
+    name = num * 'a'
 
     bucket_name = '{prefix}{name}'.format(
-            prefix=prefix,
-            name=name,
-            )
+        prefix=prefix,
+        name=name,
+    )
     bucket = get_new_bucket_resource(name=bucket_name)
     is_empty = _bucket_is_empty(bucket)
     assert is_empty == True
+
 
 # AWS does not enforce all documented bucket restrictions.
 # http://docs.amazonwebservices.com/AmazonS3/2006-03-01/dev/index.html?BucketRestrictions.html
 @pytest.mark.fails_on_aws
 def test_bucket_create_naming_bad_ip():
     check_bad_bucket_name('192.168.5.123')
+
 
 # test_bucket_create_naming_dns_* are valid but not recommended
 @pytest.mark.fails_on_aws
@@ -3677,6 +3900,7 @@ def test_bucket_create_naming_dns_underscore():
     assert status == 400
     assert error_code == 'InvalidBucketName'
 
+
 # Breaks DNS with SubdomainCallingFormat
 @pytest.mark.fails_on_aws
 def test_bucket_create_naming_dns_long():
@@ -3684,6 +3908,7 @@ def test_bucket_create_naming_dns_long():
     assert len(prefix) < 50
     num = 63 - len(prefix)
     check_good_bucket_name(num * 'a')
+
 
 # Breaks DNS with SubdomainCallingFormat
 @pytest.mark.fails_on_aws
@@ -3724,6 +3949,7 @@ def test_bucket_create_naming_dns_dash_dot():
     assert status == 400
     assert error_code == 'InvalidBucketName'
 
+
 def test_bucket_create_exists():
     # aws-s3 default region allows recreation of buckets
     # but all other regions fail with BucketAlreadyOwnedByYou.
@@ -3737,6 +3963,7 @@ def test_bucket_create_exists():
         status, error_code = _get_status_and_error_code(e.response)
         assert e.status == 409
         assert e.error_code == 'BucketAlreadyOwnedByYou'
+
 
 @pytest.mark.fails_on_dbstore
 def test_bucket_get_location():
@@ -3753,6 +3980,7 @@ def test_bucket_get_location():
         location_constraint = None
     assert response['LocationConstraint'] == location_constraint
 
+
 @pytest.mark.fails_on_dbstore
 def test_bucket_create_exists_nonowner():
     # Names are shared across a global namespace. As such, no two
@@ -3768,6 +3996,7 @@ def test_bucket_create_exists_nonowner():
     assert status == 409
     assert error_code == 'BucketAlreadyExists'
 
+
 @pytest.mark.fails_on_dbstore
 def test_bucket_recreate_overwrite_acl():
     bucket_name = get_new_bucket_name()
@@ -3779,6 +4008,7 @@ def test_bucket_recreate_overwrite_acl():
     assert status == 409
     assert error_code == 'BucketAlreadyExists'
 
+
 @pytest.mark.fails_on_dbstore
 def test_bucket_recreate_new_acl():
     bucket_name = get_new_bucket_name()
@@ -3789,6 +4019,7 @@ def test_bucket_recreate_new_acl():
     status, error_code = _get_status_and_error_code(e.response)
     assert status == 409
     assert error_code == 'BucketAlreadyExists'
+
 
 def check_access_denied(fn, *args, **kwargs):
     e = assert_raises(ClientError, fn, *args, **kwargs)
@@ -3843,9 +4074,10 @@ def test_bucket_acl_default():
                 URI=None,
                 EmailAddress=None,
                 Type='CanonicalUser',
-                ),
-            ],
-        )
+            ),
+        ],
+    )
+
 
 @pytest.mark.fails_on_aws
 def test_bucket_acl_canned_during_create():
@@ -3868,7 +4100,7 @@ def test_bucket_acl_canned_during_create():
                 URI='http://acs.amazonaws.com/groups/global/AllUsers',
                 EmailAddress=None,
                 Type='Group',
-                ),
+            ),
             dict(
                 Permission='FULL_CONTROL',
                 ID=user_id,
@@ -3876,9 +4108,10 @@ def test_bucket_acl_canned_during_create():
                 URI=None,
                 EmailAddress=None,
                 Type='CanonicalUser',
-                ),
-            ],
-        )
+            ),
+        ],
+    )
+
 
 def test_bucket_acl_canned():
     bucket_name = get_new_bucket_name()
@@ -3900,7 +4133,7 @@ def test_bucket_acl_canned():
                 URI='http://acs.amazonaws.com/groups/global/AllUsers',
                 EmailAddress=None,
                 Type='Group',
-                ),
+            ),
             dict(
                 Permission='FULL_CONTROL',
                 ID=user_id,
@@ -3908,9 +4141,9 @@ def test_bucket_acl_canned():
                 URI=None,
                 EmailAddress=None,
                 Type='CanonicalUser',
-                ),
-            ],
-        )
+            ),
+        ],
+    )
 
     client.put_bucket_acl(ACL='private', Bucket=bucket_name)
     response = client.get_bucket_acl(Bucket=bucket_name)
@@ -3926,9 +4159,10 @@ def test_bucket_acl_canned():
                 URI=None,
                 EmailAddress=None,
                 Type='CanonicalUser',
-                ),
-            ],
-        )
+            ),
+        ],
+    )
+
 
 def test_bucket_acl_canned_publicreadwrite():
     bucket_name = get_new_bucket_name()
@@ -3949,7 +4183,7 @@ def test_bucket_acl_canned_publicreadwrite():
                 URI='http://acs.amazonaws.com/groups/global/AllUsers',
                 EmailAddress=None,
                 Type='Group',
-                ),
+            ),
             dict(
                 Permission='WRITE',
                 ID=None,
@@ -3957,7 +4191,7 @@ def test_bucket_acl_canned_publicreadwrite():
                 URI='http://acs.amazonaws.com/groups/global/AllUsers',
                 EmailAddress=None,
                 Type='Group',
-                ),
+            ),
             dict(
                 Permission='FULL_CONTROL',
                 ID=user_id,
@@ -3965,9 +4199,10 @@ def test_bucket_acl_canned_publicreadwrite():
                 URI=None,
                 EmailAddress=None,
                 Type='CanonicalUser',
-                ),
-            ],
-        )
+            ),
+        ],
+    )
+
 
 def test_bucket_acl_canned_authenticatedread():
     bucket_name = get_new_bucket_name()
@@ -3989,7 +4224,7 @@ def test_bucket_acl_canned_authenticatedread():
                 URI='http://acs.amazonaws.com/groups/global/AuthenticatedUsers',
                 EmailAddress=None,
                 Type='Group',
-                ),
+            ),
             dict(
                 Permission='FULL_CONTROL',
                 ID=user_id,
@@ -3997,9 +4232,10 @@ def test_bucket_acl_canned_authenticatedread():
                 URI=None,
                 EmailAddress=None,
                 Type='CanonicalUser',
-                ),
-            ],
-        )
+            ),
+        ],
+    )
+
 
 def test_object_acl_default():
     bucket_name = get_new_bucket()
@@ -4010,7 +4246,6 @@ def test_object_acl_default():
 
     display_name = get_main_display_name()
     user_id = get_main_user_id()
-
 
     grants = response['Grants']
     check_grants(
@@ -4023,9 +4258,10 @@ def test_object_acl_default():
                 URI=None,
                 EmailAddress=None,
                 Type='CanonicalUser',
-                ),
-            ],
-        )
+            ),
+        ],
+    )
+
 
 def test_object_acl_canned_during_create():
     bucket_name = get_new_bucket()
@@ -4036,7 +4272,6 @@ def test_object_acl_canned_during_create():
 
     display_name = get_main_display_name()
     user_id = get_main_user_id()
-
 
     grants = response['Grants']
     check_grants(
@@ -4049,7 +4284,7 @@ def test_object_acl_canned_during_create():
                 URI='http://acs.amazonaws.com/groups/global/AllUsers',
                 EmailAddress=None,
                 Type='Group',
-                ),
+            ),
             dict(
                 Permission='FULL_CONTROL',
                 ID=user_id,
@@ -4057,9 +4292,10 @@ def test_object_acl_canned_during_create():
                 URI=None,
                 EmailAddress=None,
                 Type='CanonicalUser',
-                ),
-            ],
-        )
+            ),
+        ],
+    )
+
 
 def test_object_acl_canned():
     bucket_name = get_new_bucket()
@@ -4083,7 +4319,7 @@ def test_object_acl_canned():
                 URI='http://acs.amazonaws.com/groups/global/AllUsers',
                 EmailAddress=None,
                 Type='Group',
-                ),
+            ),
             dict(
                 Permission='FULL_CONTROL',
                 ID=user_id,
@@ -4091,12 +4327,12 @@ def test_object_acl_canned():
                 URI=None,
                 EmailAddress=None,
                 Type='CanonicalUser',
-                ),
-            ],
-        )
+            ),
+        ],
+    )
 
     # Then back to private.
-    client.put_object_acl(ACL='private',Bucket=bucket_name, Key='foo')
+    client.put_object_acl(ACL='private', Bucket=bucket_name, Key='foo')
     response = client.get_object_acl(Bucket=bucket_name, Key='foo')
     grants = response['Grants']
 
@@ -4110,9 +4346,10 @@ def test_object_acl_canned():
                 URI=None,
                 EmailAddress=None,
                 Type='CanonicalUser',
-                ),
-            ],
-        )
+            ),
+        ],
+    )
+
 
 def test_object_acl_canned_publicreadwrite():
     bucket_name = get_new_bucket()
@@ -4135,7 +4372,7 @@ def test_object_acl_canned_publicreadwrite():
                 URI='http://acs.amazonaws.com/groups/global/AllUsers',
                 EmailAddress=None,
                 Type='Group',
-                ),
+            ),
             dict(
                 Permission='WRITE',
                 ID=None,
@@ -4143,7 +4380,7 @@ def test_object_acl_canned_publicreadwrite():
                 URI='http://acs.amazonaws.com/groups/global/AllUsers',
                 EmailAddress=None,
                 Type='Group',
-                ),
+            ),
             dict(
                 Permission='FULL_CONTROL',
                 ID=user_id,
@@ -4151,9 +4388,10 @@ def test_object_acl_canned_publicreadwrite():
                 URI=None,
                 EmailAddress=None,
                 Type='CanonicalUser',
-                ),
-            ],
-        )
+            ),
+        ],
+    )
+
 
 def test_object_acl_canned_authenticatedread():
     bucket_name = get_new_bucket()
@@ -4176,7 +4414,7 @@ def test_object_acl_canned_authenticatedread():
                 URI='http://acs.amazonaws.com/groups/global/AuthenticatedUsers',
                 EmailAddress=None,
                 Type='Group',
-                ),
+            ),
             dict(
                 Permission='FULL_CONTROL',
                 ID=user_id,
@@ -4184,9 +4422,10 @@ def test_object_acl_canned_authenticatedread():
                 URI=None,
                 EmailAddress=None,
                 Type='CanonicalUser',
-                ),
-            ],
-        )
+            ),
+        ],
+    )
+
 
 def test_object_acl_canned_bucketownerread():
     bucket_name = get_new_bucket_name()
@@ -4218,7 +4457,7 @@ def test_object_acl_canned_bucketownerread():
                 URI=None,
                 EmailAddress=None,
                 Type='CanonicalUser',
-                ),
+            ),
             dict(
                 Permission='READ',
                 ID=bucket_owner_id,
@@ -4226,9 +4465,10 @@ def test_object_acl_canned_bucketownerread():
                 URI=None,
                 EmailAddress=None,
                 Type='CanonicalUser',
-                ),
-            ],
-        )
+            ),
+        ],
+    )
+
 
 def test_object_acl_canned_bucketownerfullcontrol():
     bucket_name = get_new_bucket_name()
@@ -4260,7 +4500,7 @@ def test_object_acl_canned_bucketownerfullcontrol():
                 URI=None,
                 EmailAddress=None,
                 Type='CanonicalUser',
-                ),
+            ),
             dict(
                 Permission='FULL_CONTROL',
                 ID=bucket_owner_id,
@@ -4268,9 +4508,10 @@ def test_object_acl_canned_bucketownerfullcontrol():
                 URI=None,
                 EmailAddress=None,
                 Type='CanonicalUser',
-                ),
-            ],
-        )
+            ),
+        ],
+    )
+
 
 @pytest.mark.fails_on_aws
 def test_object_acl_full_control_verify_owner():
@@ -4288,16 +4529,19 @@ def test_object_acl_full_control_verify_owner():
     main_user_id = get_main_user_id()
     main_display_name = get_main_display_name()
 
-    grant = { 'Grants': [{'Grantee': {'ID': alt_user_id, 'Type': 'CanonicalUser' }, 'Permission': 'FULL_CONTROL'}], 'Owner': {'DisplayName': main_display_name, 'ID': main_user_id}}
+    grant = {'Grants': [{'Grantee': {'ID': alt_user_id, 'Type': 'CanonicalUser'}, 'Permission': 'FULL_CONTROL'}],
+             'Owner': {'DisplayName': main_display_name, 'ID': main_user_id}}
 
     main_client.put_object_acl(Bucket=bucket_name, Key='foo', AccessControlPolicy=grant)
 
-    grant = { 'Grants': [{'Grantee': {'ID': alt_user_id, 'Type': 'CanonicalUser' }, 'Permission': 'READ_ACP'}], 'Owner': {'DisplayName': main_display_name, 'ID': main_user_id}}
+    grant = {'Grants': [{'Grantee': {'ID': alt_user_id, 'Type': 'CanonicalUser'}, 'Permission': 'READ_ACP'}],
+             'Owner': {'DisplayName': main_display_name, 'ID': main_user_id}}
 
     alt_client.put_object_acl(Bucket=bucket_name, Key='foo', AccessControlPolicy=grant)
 
     response = alt_client.get_object_acl(Bucket=bucket_name, Key='foo')
     assert response['Owner']['ID'] == main_user_id
+
 
 def add_obj_user_grant(bucket_name, key, grant):
     """
@@ -4321,6 +4565,7 @@ def add_obj_user_grant(bucket_name, key, grant):
 
     return grant
 
+
 def test_object_acl_full_control_verify_attributes():
     bucket_name = get_new_bucket_name()
     main_client = get_client()
@@ -4341,7 +4586,7 @@ def test_object_acl_full_control_verify_attributes():
 
     alt_user_id = get_alt_user_id()
 
-    grant = {'Grantee': {'ID': alt_user_id, 'Type': 'CanonicalUser' }, 'Permission': 'FULL_CONTROL'}
+    grant = {'Grantee': {'ID': alt_user_id, 'Type': 'CanonicalUser'}, 'Permission': 'FULL_CONTROL'}
 
     grants = add_obj_user_grant(bucket_name, 'foo', grant)
 
@@ -4351,12 +4596,14 @@ def test_object_acl_full_control_verify_attributes():
     assert content_type == response['ContentType']
     assert etag == response['ETag']
 
+
 def test_bucket_acl_canned_private_to_private():
     bucket_name = get_new_bucket()
     client = get_client()
 
     response = client.put_bucket_acl(Bucket=bucket_name, ACL='private')
     assert response['ResponseMetadata']['HTTPStatusCode'] == 200
+
 
 def add_bucket_user_grant(bucket_name, grant):
     """
@@ -4378,6 +4625,7 @@ def add_bucket_user_grant(bucket_name, grant):
     grant = {'Grants': grants, 'Owner': {'DisplayName': main_display_name, 'ID': main_user_id}}
 
     return grant
+
 
 def _check_object_acl(permission):
     """
@@ -4414,18 +4662,20 @@ def _check_object_acl(permission):
                 URI=None,
                 EmailAddress=None,
                 Type='CanonicalUser',
-                ),
-            ],
-        )
+            ),
+        ],
+    )
 
 
 @pytest.mark.fails_on_aws
 def test_object_acl():
     _check_object_acl('FULL_CONTROL')
 
+
 @pytest.mark.fails_on_aws
 def test_object_acl_write():
     _check_object_acl('WRITE')
+
 
 @pytest.mark.fails_on_aws
 def test_object_acl_writeacp():
@@ -4456,7 +4706,7 @@ def _bucket_acl_grant_userid(permission):
     alt_user_id = get_alt_user_id()
     alt_display_name = get_alt_display_name()
 
-    grant = {'Grantee': {'ID': alt_user_id, 'Type': 'CanonicalUser' }, 'Permission': permission}
+    grant = {'Grantee': {'ID': alt_user_id, 'Type': 'CanonicalUser'}, 'Permission': permission}
 
     grant = add_bucket_user_grant(bucket_name, grant)
 
@@ -4475,7 +4725,7 @@ def _bucket_acl_grant_userid(permission):
                 URI=None,
                 EmailAddress=None,
                 Type='CanonicalUser',
-                ),
+            ),
             dict(
                 Permission='FULL_CONTROL',
                 ID=main_user_id,
@@ -4483,11 +4733,12 @@ def _bucket_acl_grant_userid(permission):
                 URI=None,
                 EmailAddress=None,
                 Type='CanonicalUser',
-                ),
-            ],
-        )
+            ),
+        ],
+    )
 
     return bucket_name
+
 
 def _check_bucket_acl_grant_can_read(bucket_name):
     """
@@ -4496,12 +4747,14 @@ def _check_bucket_acl_grant_can_read(bucket_name):
     alt_client = get_alt_client()
     response = alt_client.head_bucket(Bucket=bucket_name)
 
+
 def _check_bucket_acl_grant_cant_read(bucket_name):
     """
     verify inability to read the specified bucket
     """
     alt_client = get_alt_client()
     check_access_denied(alt_client.head_bucket, Bucket=bucket_name)
+
 
 def _check_bucket_acl_grant_can_readacp(bucket_name):
     """
@@ -4510,12 +4763,14 @@ def _check_bucket_acl_grant_can_readacp(bucket_name):
     alt_client = get_alt_client()
     alt_client.get_bucket_acl(Bucket=bucket_name)
 
+
 def _check_bucket_acl_grant_cant_readacp(bucket_name):
     """
     verify inability to read acls on specified bucket
     """
     alt_client = get_alt_client()
     check_access_denied(alt_client.get_bucket_acl, Bucket=bucket_name)
+
 
 def _check_bucket_acl_grant_can_write(bucket_name):
     """
@@ -4524,13 +4779,14 @@ def _check_bucket_acl_grant_can_write(bucket_name):
     alt_client = get_alt_client()
     alt_client.put_object(Bucket=bucket_name, Key='foo-write', Body='bar')
 
-def _check_bucket_acl_grant_cant_write(bucket_name):
 
+def _check_bucket_acl_grant_cant_write(bucket_name):
     """
     verify inability to write the specified bucket
     """
     alt_client = get_alt_client()
     check_access_denied(alt_client.put_object, Bucket=bucket_name, Key='foo-write', Body='bar')
+
 
 def _check_bucket_acl_grant_can_writeacp(bucket_name):
     """
@@ -4539,12 +4795,14 @@ def _check_bucket_acl_grant_can_writeacp(bucket_name):
     alt_client = get_alt_client()
     alt_client.put_bucket_acl(Bucket=bucket_name, ACL='public-read')
 
+
 def _check_bucket_acl_grant_cant_writeacp(bucket_name):
     """
     verify inability to set acls on the specified bucket
     """
     alt_client = get_alt_client()
-    check_access_denied(alt_client.put_bucket_acl,Bucket=bucket_name, ACL='public-read')
+    check_access_denied(alt_client.put_bucket_acl, Bucket=bucket_name, ACL='public-read')
+
 
 @pytest.mark.fails_on_aws
 def test_bucket_acl_grant_userid_fullcontrol():
@@ -4571,6 +4829,7 @@ def test_bucket_acl_grant_userid_fullcontrol():
     assert owner_id == main_user_id
     assert owner_display_name == main_display_name
 
+
 @pytest.mark.fails_on_aws
 def test_bucket_acl_grant_userid_read():
     bucket_name = _bucket_acl_grant_userid('READ')
@@ -4584,6 +4843,7 @@ def test_bucket_acl_grant_userid_read():
     # can't write acl
     _check_bucket_acl_grant_cant_writeacp(bucket_name)
 
+
 @pytest.mark.fails_on_aws
 def test_bucket_acl_grant_userid_readacp():
     bucket_name = _bucket_acl_grant_userid('READ_ACP')
@@ -4595,8 +4855,9 @@ def test_bucket_acl_grant_userid_readacp():
     # can't write
     _check_bucket_acl_grant_cant_write(bucket_name)
     # can't write acp
-    #_check_bucket_acl_grant_cant_writeacp_can_readacp(bucket)
+    # _check_bucket_acl_grant_cant_writeacp_can_readacp(bucket)
     _check_bucket_acl_grant_cant_writeacp(bucket_name)
+
 
 @pytest.mark.fails_on_aws
 def test_bucket_acl_grant_userid_write():
@@ -4611,6 +4872,7 @@ def test_bucket_acl_grant_userid_write():
     # can't write acl
     _check_bucket_acl_grant_cant_writeacp(bucket_name)
 
+
 @pytest.mark.fails_on_aws
 def test_bucket_acl_grant_userid_writeacp():
     bucket_name = _bucket_acl_grant_userid('WRITE_ACP')
@@ -4624,14 +4886,15 @@ def test_bucket_acl_grant_userid_writeacp():
     # can write acl
     _check_bucket_acl_grant_can_writeacp(bucket_name)
 
+
 def test_bucket_acl_grant_nonexist_user():
     bucket_name = get_new_bucket()
     client = get_client()
 
     bad_user_id = '_foo'
 
-    #response = client.get_bucket_acl(Bucket=bucket_name)
-    grant = {'Grantee': {'ID': bad_user_id, 'Type': 'CanonicalUser' }, 'Permission': 'FULL_CONTROL'}
+    # response = client.get_bucket_acl(Bucket=bucket_name)
+    grant = {'Grantee': {'ID': bad_user_id, 'Type': 'CanonicalUser'}, 'Permission': 'FULL_CONTROL'}
 
     grant = add_bucket_user_grant(bucket_name, grant)
 
@@ -4639,6 +4902,7 @@ def test_bucket_acl_grant_nonexist_user():
     status, error_code = _get_status_and_error_code(e.response)
     assert status == 400
     assert error_code == 'InvalidArgument'
+
 
 def test_bucket_acl_no_grants():
     bucket_name = get_new_bucket()
@@ -4661,7 +4925,7 @@ def test_bucket_acl_no_grants():
     # can't write
     check_access_denied(client.put_object, Bucket=bucket_name, Key='baz', Body='a')
 
-    #TODO fix this test once a fix is in for same issues in
+    # TODO fix this test once a fix is in for same issues in
     # test_access_bucket_private_object_private
     client2 = get_client()
     # owner can read acl
@@ -4673,6 +4937,7 @@ def test_bucket_acl_no_grants():
     # set policy back to original so that bucket can be cleaned up
     policy['Grants'] = old_grants
     client2.put_bucket_acl(Bucket=bucket_name, AccessControlPolicy=policy)
+
 
 def _get_acl_header(user_id=None, perms=None):
     all_headers = ["read", "write", "read-acp", "write-acp", "full-control"]
@@ -4692,6 +4957,7 @@ def _get_acl_header(user_id=None, perms=None):
             headers.append(header)
 
     return headers
+
 
 @pytest.mark.fails_on_dho
 @pytest.mark.fails_on_aws
@@ -4725,7 +4991,7 @@ def test_object_header_acl_grants():
                 URI=None,
                 EmailAddress=None,
                 Type='CanonicalUser',
-                ),
+            ),
             dict(
                 Permission='WRITE',
                 ID=alt_user_id,
@@ -4733,7 +4999,7 @@ def test_object_header_acl_grants():
                 URI=None,
                 EmailAddress=None,
                 Type='CanonicalUser',
-                ),
+            ),
             dict(
                 Permission='READ_ACP',
                 ID=alt_user_id,
@@ -4741,7 +5007,7 @@ def test_object_header_acl_grants():
                 URI=None,
                 EmailAddress=None,
                 Type='CanonicalUser',
-                ),
+            ),
             dict(
                 Permission='WRITE_ACP',
                 ID=alt_user_id,
@@ -4749,7 +5015,7 @@ def test_object_header_acl_grants():
                 URI=None,
                 EmailAddress=None,
                 Type='CanonicalUser',
-                ),
+            ),
             dict(
                 Permission='FULL_CONTROL',
                 ID=alt_user_id,
@@ -4757,9 +5023,10 @@ def test_object_header_acl_grants():
                 URI=None,
                 EmailAddress=None,
                 Type='CanonicalUser',
-                ),
-            ],
-        )
+            ),
+        ],
+    )
+
 
 @pytest.mark.fails_on_dho
 @pytest.mark.fails_on_aws
@@ -4794,7 +5061,7 @@ def test_bucket_header_acl_grants():
                 URI=None,
                 EmailAddress=None,
                 Type='CanonicalUser',
-                ),
+            ),
             dict(
                 Permission='WRITE',
                 ID=alt_user_id,
@@ -4802,7 +5069,7 @@ def test_bucket_header_acl_grants():
                 URI=None,
                 EmailAddress=None,
                 Type='CanonicalUser',
-                ),
+            ),
             dict(
                 Permission='READ_ACP',
                 ID=alt_user_id,
@@ -4810,7 +5077,7 @@ def test_bucket_header_acl_grants():
                 URI=None,
                 EmailAddress=None,
                 Type='CanonicalUser',
-                ),
+            ),
             dict(
                 Permission='WRITE_ACP',
                 ID=alt_user_id,
@@ -4818,7 +5085,7 @@ def test_bucket_header_acl_grants():
                 URI=None,
                 EmailAddress=None,
                 Type='CanonicalUser',
-                ),
+            ),
             dict(
                 Permission='FULL_CONTROL',
                 ID=alt_user_id,
@@ -4826,9 +5093,9 @@ def test_bucket_header_acl_grants():
                 URI=None,
                 EmailAddress=None,
                 Type='CanonicalUser',
-                ),
-            ],
-        )
+            ),
+        ],
+    )
 
     alt_client = get_alt_client()
 
@@ -4853,11 +5120,12 @@ def test_bucket_acl_grant_email():
     main_user_id = get_main_user_id()
     main_display_name = get_main_display_name()
 
-    grant = {'Grantee': {'EmailAddress': alt_email_address, 'Type': 'AmazonCustomerByEmail' }, 'Permission': 'FULL_CONTROL'}
+    grant = {'Grantee': {'EmailAddress': alt_email_address, 'Type': 'AmazonCustomerByEmail'},
+             'Permission': 'FULL_CONTROL'}
 
     grant = add_bucket_user_grant(bucket_name, grant)
 
-    client.put_bucket_acl(Bucket=bucket_name, AccessControlPolicy = grant)
+    client.put_bucket_acl(Bucket=bucket_name, AccessControlPolicy=grant)
 
     response = client.get_bucket_acl(Bucket=bucket_name)
 
@@ -4872,7 +5140,7 @@ def test_bucket_acl_grant_email():
                 URI=None,
                 EmailAddress=None,
                 Type='CanonicalUser',
-                ),
+            ),
             dict(
                 Permission='FULL_CONTROL',
                 ID=main_user_id,
@@ -4880,9 +5148,10 @@ def test_bucket_acl_grant_email():
                 URI=None,
                 EmailAddress=None,
                 Type='CanonicalUser',
-                ),
+            ),
         ]
     )
+
 
 def test_bucket_acl_grant_email_not_exist():
     # behavior not documented by amazon
@@ -4894,14 +5163,16 @@ def test_bucket_acl_grant_email_not_exist():
     alt_email_address = get_alt_email()
 
     NONEXISTENT_EMAIL = 'doesnotexist@dreamhost.com.invalid'
-    grant = {'Grantee': {'EmailAddress': NONEXISTENT_EMAIL, 'Type': 'AmazonCustomerByEmail'}, 'Permission': 'FULL_CONTROL'}
+    grant = {'Grantee': {'EmailAddress': NONEXISTENT_EMAIL, 'Type': 'AmazonCustomerByEmail'},
+             'Permission': 'FULL_CONTROL'}
 
     grant = add_bucket_user_grant(bucket_name, grant)
 
-    e = assert_raises(ClientError, client.put_bucket_acl, Bucket=bucket_name, AccessControlPolicy = grant)
+    e = assert_raises(ClientError, client.put_bucket_acl, Bucket=bucket_name, AccessControlPolicy=grant)
     status, error_code = _get_status_and_error_code(e.response)
     assert status == 400
     assert error_code == 'UnresolvableGrantByEmailAddress'
+
 
 def test_bucket_acl_revoke_all():
     # revoke all access, including the owner's access
@@ -4927,6 +5198,7 @@ def test_bucket_acl_revoke_all():
     policy['Grants'] = old_grants
     client.put_bucket_acl(Bucket=bucket_name, AccessControlPolicy=policy)
 
+
 # TODO rgw log_bucket.set_as_logging_target() gives 403 Forbidden
 # http://tracker.newdream.net/issues/984
 @pytest.mark.fails_on_rgw
@@ -4937,13 +5209,16 @@ def test_logging_toggle():
     main_display_name = get_main_display_name()
     main_user_id = get_main_user_id()
 
-    status = {'LoggingEnabled': {'TargetBucket': bucket_name, 'TargetGrants': [{'Grantee': {'DisplayName': main_display_name, 'ID': main_user_id,'Type': 'CanonicalUser'},'Permission': 'FULL_CONTROL'}], 'TargetPrefix': 'foologgingprefix'}}
+    status = {'LoggingEnabled': {'TargetBucket': bucket_name, 'TargetGrants': [
+        {'Grantee': {'DisplayName': main_display_name, 'ID': main_user_id, 'Type': 'CanonicalUser'},
+         'Permission': 'FULL_CONTROL'}], 'TargetPrefix': 'foologgingprefix'}}
 
     client.put_bucket_logging(Bucket=bucket_name, BucketLoggingStatus=status)
     client.get_bucket_logging(Bucket=bucket_name)
     status = {'LoggingEnabled': {}}
     client.put_bucket_logging(Bucket=bucket_name, BucketLoggingStatus=status)
     # NOTE: this does not actually test whether or not logging works
+
 
 def _setup_access(bucket_acl, object_acl):
     """
@@ -4967,25 +5242,29 @@ def _setup_access(bucket_acl, object_acl):
 
     return bucket_name, key1, key2, newkey
 
+
 def get_bucket_key_names(bucket_name):
     objs_list = get_objects_list(bucket_name)
     return frozenset(obj for obj in objs_list)
 
+
 def list_bucket_storage_class(client, bucket_name):
     result = defaultdict(list)
-    response  = client.list_object_versions(Bucket=bucket_name)
+    response = client.list_object_versions(Bucket=bucket_name)
     for k in response['Versions']:
         result[k['StorageClass']].append(k)
 
     return result
 
+
 def list_bucket_versions(client, bucket_name):
     result = defaultdict(list)
-    response  = client.list_object_versions(Bucket=bucket_name)
+    response = client.list_object_versions(Bucket=bucket_name)
     for k in response['Versions']:
         result[response['Name']].append(k)
 
     return result
+
 
 def test_access_bucket_private_object_private():
     # all the test_access_* tests follow this template
@@ -5013,6 +5292,7 @@ def test_access_bucket_private_object_private():
     # bucket write fail
     alt_client3 = get_alt_client()
     check_access_denied(alt_client3.put_object, Bucket=bucket_name, Key=newkey, Body='newcontent')
+
 
 @pytest.mark.list_objects_v2
 def test_access_bucket_private_objectv2_private():
@@ -5042,8 +5322,8 @@ def test_access_bucket_private_objectv2_private():
     alt_client3 = get_alt_client()
     check_access_denied(alt_client3.put_object, Bucket=bucket_name, Key=newkey, Body='newcontent')
 
-def test_access_bucket_private_object_publicread():
 
+def test_access_bucket_private_object_publicread():
     bucket_name, key1, key2, newkey = _setup_access(bucket_acl='private', object_acl='public-read')
     alt_client = get_alt_client()
     response = alt_client.get_object(Bucket=bucket_name, Key=key1)
@@ -5062,9 +5342,9 @@ def test_access_bucket_private_object_publicread():
     check_access_denied(alt_client3.list_objects, Bucket=bucket_name)
     check_access_denied(alt_client3.put_object, Bucket=bucket_name, Key=newkey, Body='newcontent')
 
+
 @pytest.mark.list_objects_v2
 def test_access_bucket_private_objectv2_publicread():
-
     bucket_name, key1, key2, newkey = _setup_access(bucket_acl='private', object_acl='public-read')
     alt_client = get_alt_client()
     response = alt_client.get_object(Bucket=bucket_name, Key=key1)
@@ -5082,6 +5362,7 @@ def test_access_bucket_private_objectv2_publicread():
     alt_client3 = get_alt_client()
     check_access_denied(alt_client3.list_objects_v2, Bucket=bucket_name)
     check_access_denied(alt_client3.put_object, Bucket=bucket_name, Key=newkey, Body='newcontent')
+
 
 def test_access_bucket_private_object_publicreadwrite():
     bucket_name, key1, key2, newkey = _setup_access(bucket_acl='private', object_acl='public-read-write')
@@ -5102,6 +5383,7 @@ def test_access_bucket_private_object_publicreadwrite():
     alt_client3 = get_alt_client()
     check_access_denied(alt_client3.list_objects, Bucket=bucket_name)
     check_access_denied(alt_client3.put_object, Bucket=bucket_name, Key=newkey, Body='newcontent')
+
 
 @pytest.mark.list_objects_v2
 def test_access_bucket_private_objectv2_publicreadwrite():
@@ -5124,6 +5406,7 @@ def test_access_bucket_private_objectv2_publicreadwrite():
     check_access_denied(alt_client3.list_objects_v2, Bucket=bucket_name)
     check_access_denied(alt_client3.put_object, Bucket=bucket_name, Key=newkey, Body='newcontent')
 
+
 def test_access_bucket_publicread_object_private():
     bucket_name, key1, key2, newkey = _setup_access(bucket_acl='public-read', object_acl='private')
     alt_client = get_alt_client()
@@ -5142,6 +5425,7 @@ def test_access_bucket_publicread_object_private():
 
     assert objs == ['bar', 'foo']
     check_access_denied(alt_client3.put_object, Bucket=bucket_name, Key=newkey, Body='newcontent')
+
 
 def test_access_bucket_publicread_object_publicread():
     bucket_name, key1, key2, newkey = _setup_access(bucket_acl='public-read', object_acl='public-read')
@@ -5208,6 +5492,7 @@ def test_access_bucket_publicreadwrite_object_private():
     assert objs == ['bar', 'foo']
     alt_client.put_object(Bucket=bucket_name, Key=newkey, Body='newcontent')
 
+
 def test_access_bucket_publicreadwrite_object_publicread():
     bucket_name, key1, key2, newkey = _setup_access(bucket_acl='public-read-write', object_acl='public-read')
     alt_client = get_alt_client()
@@ -5226,6 +5511,7 @@ def test_access_bucket_publicreadwrite_object_publicread():
     assert objs == ['bar', 'foo']
     alt_client.put_object(Bucket=bucket_name, Key=newkey, Body='newcontent')
 
+
 def test_access_bucket_publicreadwrite_object_publicreadwrite():
     bucket_name, key1, key2, newkey = _setup_access(bucket_acl='public-read-write', object_acl='public-read-write')
     alt_client = get_alt_client()
@@ -5240,6 +5526,7 @@ def test_access_bucket_publicreadwrite_object_publicreadwrite():
     objs = get_objects_list(bucket=bucket_name, client=alt_client)
     assert objs == ['bar', 'foo']
     alt_client.put_object(Bucket=bucket_name, Key=newkey, Body='newcontent')
+
 
 def test_buckets_create_then_list():
     client = get_client()
@@ -5261,6 +5548,7 @@ def test_buckets_create_then_list():
         if name not in buckets_list:
             raise RuntimeError("S3 implementation's GET on Service did not return bucket we created: %r", bucket.name)
 
+
 def test_buckets_list_ctime():
     # check that creation times are within a day
     before = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=1)
@@ -5274,6 +5562,7 @@ def test_buckets_list_ctime():
         ctime = bucket['CreationDate']
         assert before <= ctime, '%r > %r' % (before, ctime)
 
+
 @pytest.mark.fails_on_aws
 def test_list_buckets_anonymous():
     # Get a connection with bad authorization, then change it to be our new Anonymous auth mechanism,
@@ -5285,12 +5574,14 @@ def test_list_buckets_anonymous():
     response = unauthenticated_client.list_buckets()
     assert len(response['Buckets']) == 0
 
+
 def test_list_buckets_invalid_auth():
     bad_auth_client = get_bad_auth_client()
     e = assert_raises(ClientError, bad_auth_client.list_buckets)
     status, error_code = _get_status_and_error_code(e.response)
     assert status == 403
     assert error_code == 'InvalidAccessKeyId'
+
 
 def test_list_buckets_bad_auth():
     main_access_key = get_main_aws_access_key()
@@ -5300,33 +5591,40 @@ def test_list_buckets_bad_auth():
     assert status == 403
     assert error_code == 'SignatureDoesNotMatch'
 
+
 @pytest.fixture
 def override_prefix_a():
-    nuke_prefixed_buckets(prefix='a'+get_prefix())
+    nuke_prefixed_buckets(prefix='a' + get_prefix())
     yield
-    nuke_prefixed_buckets(prefix='a'+get_prefix())
+    nuke_prefixed_buckets(prefix='a' + get_prefix())
+
 
 # this test goes outside the user-configure prefix because it needs to
 # control the initial character of the bucket name
 def test_bucket_create_naming_good_starts_alpha(override_prefix_a):
-    check_good_bucket_name('foo', _prefix='a'+get_prefix())
+    check_good_bucket_name('foo', _prefix='a' + get_prefix())
+
 
 @pytest.fixture
 def override_prefix_0():
-    nuke_prefixed_buckets(prefix='0'+get_prefix())
+    nuke_prefixed_buckets(prefix='0' + get_prefix())
     yield
-    nuke_prefixed_buckets(prefix='0'+get_prefix())
+    nuke_prefixed_buckets(prefix='0' + get_prefix())
+
 
 # this test goes outside the user-configure prefix because it needs to
 # control the initial character of the bucket name
 def test_bucket_create_naming_good_starts_digit(override_prefix_0):
-    check_good_bucket_name('foo', _prefix='0'+get_prefix())
+    check_good_bucket_name('foo', _prefix='0' + get_prefix())
+
 
 def test_bucket_create_naming_good_contains_period():
     check_good_bucket_name('aaa.111')
 
+
 def test_bucket_create_naming_good_contains_hyphen():
     check_good_bucket_name('aaa-111')
+
 
 def test_bucket_recreate_not_overriding():
     key_names = ['mykey1', 'mykey2']
@@ -5340,6 +5638,7 @@ def test_bucket_recreate_not_overriding():
 
     objs_list = get_objects_list(bucket_name)
     assert key_names == objs_list
+
 
 @pytest.mark.fails_on_dbstore
 def test_bucket_create_special_key_names():
@@ -5372,6 +5671,7 @@ def test_bucket_create_special_key_names():
         assert name == body
         client.put_object_acl(Bucket=bucket_name, Key=name, ACL='private')
 
+
 def test_bucket_list_special_prefix():
     key_names = ['_bla/1', '_bla/2', '_bla/3', '_bla/4', 'abcd']
     bucket_name = _create_objects(keys=key_names)
@@ -5382,6 +5682,7 @@ def test_bucket_list_special_prefix():
 
     objs_list = get_objects_list(bucket_name, prefix='_bla/')
     assert len(objs_list) == 4
+
 
 @pytest.mark.fails_on_dbstore
 def test_object_copy_zero_size():
@@ -5397,18 +5698,20 @@ def test_object_copy_zero_size():
     response = client.get_object(Bucket=bucket_name, Key='bar321foo')
     assert response['ContentLength'] == 0
 
+
 @pytest.mark.fails_on_dbstore
 def test_object_copy_16m():
     bucket_name = get_new_bucket()
     key1 = 'obj1'
     client = get_client()
-    client.put_object(Bucket=bucket_name, Key=key1, Body=bytearray(16*1024*1024))
+    client.put_object(Bucket=bucket_name, Key=key1, Body=bytearray(16 * 1024 * 1024))
 
     copy_source = {'Bucket': bucket_name, 'Key': key1}
     key2 = 'obj2'
     client.copy_object(Bucket=bucket_name, Key=key2, CopySource=copy_source)
     response = client.get_object(Bucket=bucket_name, Key=key2)
-    assert response['ContentLength'] == 16*1024*1024
+    assert response['ContentLength'] == 16 * 1024 * 1024
+
 
 @pytest.mark.fails_on_dbstore
 def test_object_copy_same_bucket():
@@ -5423,6 +5726,7 @@ def test_object_copy_same_bucket():
     response = client.get_object(Bucket=bucket_name, Key='bar321foo')
     body = _get_body(response)
     assert 'foo' == body
+
 
 @pytest.mark.fails_on_dbstore
 def test_object_copy_verify_contenttype():
@@ -5442,6 +5746,7 @@ def test_object_copy_verify_contenttype():
     response_content_type = response['ContentType']
     assert response_content_type == content_type
 
+
 def test_object_copy_to_itself():
     bucket_name = get_new_bucket()
     client = get_client()
@@ -5454,6 +5759,7 @@ def test_object_copy_to_itself():
     assert status == 400
     assert error_code == 'InvalidRequest'
 
+
 @pytest.mark.fails_on_dbstore
 def test_object_copy_to_itself_with_metadata():
     bucket_name = get_new_bucket()
@@ -5462,9 +5768,11 @@ def test_object_copy_to_itself_with_metadata():
     copy_source = {'Bucket': bucket_name, 'Key': 'foo123bar'}
     metadata = {'foo': 'bar'}
 
-    client.copy_object(Bucket=bucket_name, CopySource=copy_source, Key='foo123bar', Metadata=metadata, MetadataDirective='REPLACE')
+    client.copy_object(Bucket=bucket_name, CopySource=copy_source, Key='foo123bar', Metadata=metadata,
+                       MetadataDirective='REPLACE')
     response = client.get_object(Bucket=bucket_name, Key='foo123bar')
     assert response['Metadata'] == metadata
+
 
 @pytest.mark.fails_on_dbstore
 def test_object_copy_diff_bucket():
@@ -5482,6 +5790,7 @@ def test_object_copy_diff_bucket():
     body = _get_body(response)
     assert 'foo' == body
 
+
 def test_object_copy_not_owned_bucket():
     client = get_client()
     alt_client = get_alt_client()
@@ -5498,6 +5807,7 @@ def test_object_copy_not_owned_bucket():
     status, error_code = _get_status_and_error_code(e.response)
     assert status == 403
 
+
 def test_object_copy_not_owned_object_bucket():
     client = get_client()
     alt_client = get_alt_client()
@@ -5507,7 +5817,7 @@ def test_object_copy_not_owned_object_bucket():
 
     alt_user_id = get_alt_user_id()
 
-    grant = {'Grantee': {'ID': alt_user_id, 'Type': 'CanonicalUser' }, 'Permission': 'FULL_CONTROL'}
+    grant = {'Grantee': {'ID': alt_user_id, 'Type': 'CanonicalUser'}, 'Permission': 'FULL_CONTROL'}
     grants = add_obj_user_grant(bucket_name, 'foo123bar', grant)
     client.put_object_acl(Bucket=bucket_name, Key='foo123bar', AccessControlPolicy=grants)
 
@@ -5518,6 +5828,7 @@ def test_object_copy_not_owned_object_bucket():
 
     copy_source = {'Bucket': bucket_name, 'Key': 'foo123bar'}
     alt_client.copy(copy_source, bucket_name, 'bar321foo')
+
 
 @pytest.mark.fails_on_dbstore
 def test_object_copy_canned_acl():
@@ -5531,13 +5842,14 @@ def test_object_copy_canned_acl():
     # check ACL is applied by doing GET from another user
     alt_client.get_object(Bucket=bucket_name, Key='bar321foo')
 
-
-    metadata={'abc': 'def'}
+    metadata = {'abc': 'def'}
     copy_source = {'Bucket': bucket_name, 'Key': 'bar321foo'}
-    client.copy_object(ACL='public-read', Bucket=bucket_name, CopySource=copy_source, Key='foo123bar', Metadata=metadata, MetadataDirective='REPLACE')
+    client.copy_object(ACL='public-read', Bucket=bucket_name, CopySource=copy_source, Key='foo123bar',
+                       Metadata=metadata, MetadataDirective='REPLACE')
 
     # check ACL is applied by doing GET from another user
     alt_client.get_object(Bucket=bucket_name, Key='foo123bar')
+
 
 @pytest.mark.fails_on_dbstore
 def test_object_copy_retaining_metadata():
@@ -5547,7 +5859,8 @@ def test_object_copy_retaining_metadata():
         content_type = 'audio/ogg'
 
         metadata = {'key1': 'value1', 'key2': 'value2'}
-        client.put_object(Bucket=bucket_name, Key='foo123bar', Metadata=metadata, ContentType=content_type, Body=bytearray(size))
+        client.put_object(Bucket=bucket_name, Key='foo123bar', Metadata=metadata, ContentType=content_type,
+                          Body=bytearray(size))
 
         copy_source = {'Bucket': bucket_name, 'Key': 'foo123bar'}
         client.copy_object(Bucket=bucket_name, CopySource=copy_source, Key='bar321foo')
@@ -5558,6 +5871,7 @@ def test_object_copy_retaining_metadata():
         body = _get_body(response)
         assert size == response['ContentLength']
 
+
 @pytest.mark.fails_on_dbstore
 def test_object_copy_replacing_metadata():
     for size in [3, 1024 * 1024]:
@@ -5566,18 +5880,21 @@ def test_object_copy_replacing_metadata():
         content_type = 'audio/ogg'
 
         metadata = {'key1': 'value1', 'key2': 'value2'}
-        client.put_object(Bucket=bucket_name, Key='foo123bar', Metadata=metadata, ContentType=content_type, Body=bytearray(size))
+        client.put_object(Bucket=bucket_name, Key='foo123bar', Metadata=metadata, ContentType=content_type,
+                          Body=bytearray(size))
 
         metadata = {'key3': 'value3', 'key2': 'value2'}
         content_type = 'audio/mpeg'
 
         copy_source = {'Bucket': bucket_name, 'Key': 'foo123bar'}
-        client.copy_object(Bucket=bucket_name, CopySource=copy_source, Key='bar321foo', Metadata=metadata, MetadataDirective='REPLACE', ContentType=content_type)
+        client.copy_object(Bucket=bucket_name, CopySource=copy_source, Key='bar321foo', Metadata=metadata,
+                           MetadataDirective='REPLACE', ContentType=content_type)
 
         response = client.get_object(Bucket=bucket_name, Key='bar321foo')
         assert content_type == response['ContentType']
         assert metadata == response['Metadata']
         assert size == response['ContentLength']
+
 
 def test_object_copy_bucket_not_found():
     bucket_name = get_new_bucket()
@@ -5588,6 +5905,7 @@ def test_object_copy_bucket_not_found():
     status = _get_status(e.response)
     assert status == 404
 
+
 def test_object_copy_key_not_found():
     bucket_name = get_new_bucket()
     client = get_client()
@@ -5597,12 +5915,15 @@ def test_object_copy_key_not_found():
     status = _get_status(e.response)
     assert status == 404
 
+@pytest.mark.versioning
+# # @pytest.mark.skip(reason="CopyObject doesn't support versioning yet")
+@allure.description("CopyObject doesn't support versioning yet")
 @pytest.mark.fails_on_dbstore
 def test_object_copy_versioned_bucket():
     bucket_name = get_new_bucket()
     client = get_client()
     check_configure_versioning_retry(bucket_name, "Enabled", "Enabled")
-    size = 1*5
+    size = 1 * 5
     data = bytearray(size)
     data_str = data.decode()
     key1 = 'foo123bar'
@@ -5619,7 +5940,6 @@ def test_object_copy_versioned_bucket():
     body = _get_body(response)
     assert data_str == body
     assert size == response['ContentLength']
-
 
     # second copy
     version_id2 = response['VersionId']
@@ -5661,21 +5981,23 @@ def test_object_copy_versioned_bucket():
     assert data_str == body
     assert size == response['ContentLength']
 
+@pytest.mark.versioning
 @pytest.mark.fails_on_dbstore
 def test_object_copy_versioned_url_encoding():
     bucket = get_new_bucket_resource()
     check_configure_versioning_retry(bucket.name, "Enabled", "Enabled")
     src_key = 'foo?bar'
     src = bucket.put_object(Key=src_key)
-    src.load() # HEAD request tests that the key exists
+    src.load()  # HEAD request tests that the key exists
 
     # copy object in the same bucket
     dst_key = 'bar&foo'
     dst = bucket.Object(dst_key)
     dst.copy_from(CopySource={'Bucket': src.bucket_name, 'Key': src.key, 'VersionId': src.version_id})
-    dst.load() # HEAD request tests that the key exists
+    dst.load()  # HEAD request tests that the key exists
 
-def generate_random(size, part_size=5*1024*1024):
+
+def generate_random(size, part_size=5 * 1024 * 1024):
     """
     Generate the specified number random data.
     (actually each MB is a repetition of the first KB)
@@ -5695,7 +6017,9 @@ def generate_random(size, part_size=5*1024*1024):
         if (x == size):
             return
 
-def _multipart_upload(bucket_name, key, size, part_size=5*1024*1024, client=None, content_type=None, metadata=None, resend_parts=[]):
+
+def _multipart_upload(bucket_name, key, size, part_size=5 * 1024 * 1024, client=None, content_type=None, metadata=None,
+                      resend_parts=[]):
     """
     generate a multi-part upload for a random file of specifed size,
     if requested, generate a list of the parts
@@ -5704,18 +6028,18 @@ def _multipart_upload(bucket_name, key, size, part_size=5*1024*1024, client=None
     if client == None:
         client = get_client()
 
-
     if content_type == None and metadata == None:
         response = client.create_multipart_upload(Bucket=bucket_name, Key=key)
     else:
-        response = client.create_multipart_upload(Bucket=bucket_name, Key=key, Metadata=metadata, ContentType=content_type)
+        response = client.create_multipart_upload(Bucket=bucket_name, Key=key, Metadata=metadata,
+                                                  ContentType=content_type)
 
     upload_id = response['UploadId']
     s = ''
     parts = []
     for i, part in enumerate(generate_random(size, part_size)):
         # part_num is necessary because PartNumber for upload_part and in parts must start at 1 and i starts at 0
-        part_num = i+1
+        part_num = i + 1
         s += part
         response = client.upload_part(UploadId=upload_id, Bucket=bucket_name, Key=key, PartNumber=part_num, Body=part)
         parts.append({'ETag': response['ETag'].strip('"'), 'PartNumber': part_num})
@@ -5724,7 +6048,10 @@ def _multipart_upload(bucket_name, key, size, part_size=5*1024*1024, client=None
 
     return (upload_id, s, parts)
 
+@pytest.mark.versioning
+# # @pytest.mark.skip(reason="CopyObject doesn't support versioning yet")
 @pytest.mark.fails_on_dbstore
+@allure.description("CopyObject doesn't support versioning yet")
 def test_object_copy_versioning_multipart_upload():
     bucket_name = get_new_bucket()
     client = get_client()
@@ -5734,7 +6061,8 @@ def test_object_copy_versioning_multipart_upload():
     key1_metadata = {'foo': 'bar'}
     content_type = 'text/bla'
     objlen = 30 * 1024 * 1024
-    (upload_id, data, parts) = _multipart_upload(bucket_name=bucket_name, key=key1, size=objlen, content_type=content_type, metadata=key1_metadata)
+    (upload_id, data, parts) = _multipart_upload(bucket_name=bucket_name, key=key1, size=objlen,
+                                                 content_type=content_type, metadata=key1_metadata)
     client.complete_multipart_upload(Bucket=bucket_name, Key=key1, UploadId=upload_id, MultipartUpload={'Parts': parts})
 
     response = client.get_object(Bucket=bucket_name, Key=key1)
@@ -5801,6 +6129,7 @@ def test_object_copy_versioning_multipart_upload():
     assert key1_metadata == response['Metadata']
     assert content_type == response['ContentType']
 
+
 def test_multipart_upload_empty():
     bucket_name = get_new_bucket()
     client = get_client()
@@ -5808,10 +6137,11 @@ def test_multipart_upload_empty():
     key1 = "mymultipart"
     objlen = 0
     (upload_id, data, parts) = _multipart_upload(bucket_name=bucket_name, key=key1, size=objlen)
-    e = assert_raises(ClientError, client.complete_multipart_upload,Bucket=bucket_name, Key=key1, UploadId=upload_id)
+    e = assert_raises(ClientError, client.complete_multipart_upload, Bucket=bucket_name, Key=key1, UploadId=upload_id)
     status, error_code = _get_status_and_error_code(e.response)
     assert status == 400
     assert error_code == 'MalformedXML'
+
 
 @pytest.mark.fails_on_dbstore
 def test_multipart_upload_small():
@@ -5821,13 +6151,16 @@ def test_multipart_upload_small():
     key1 = "mymultipart"
     objlen = 1
     (upload_id, data, parts) = _multipart_upload(bucket_name=bucket_name, key=key1, size=objlen)
-    response = client.complete_multipart_upload(Bucket=bucket_name, Key=key1, UploadId=upload_id, MultipartUpload={'Parts': parts})
+    response = client.complete_multipart_upload(Bucket=bucket_name, Key=key1, UploadId=upload_id,
+                                                MultipartUpload={'Parts': parts})
     response = client.get_object(Bucket=bucket_name, Key=key1)
     assert response['ContentLength'] == objlen
     # check extra client.complete_multipart_upload
-    response = client.complete_multipart_upload(Bucket=bucket_name, Key=key1, UploadId=upload_id, MultipartUpload={'Parts': parts})
+    response = client.complete_multipart_upload(Bucket=bucket_name, Key=key1, UploadId=upload_id,
+                                                MultipartUpload={'Parts': parts})
 
-def _create_key_with_random_content(keyname, size=7*1024*1024, bucket_name=None, client=None):
+
+def _create_key_with_random_content(keyname, size=7 * 1024 * 1024, bucket_name=None, client=None):
     if bucket_name is None:
         bucket_name = get_new_bucket()
 
@@ -5840,15 +6173,16 @@ def _create_key_with_random_content(keyname, size=7*1024*1024, bucket_name=None,
 
     return bucket_name
 
-def _multipart_copy(src_bucket_name, src_key, dest_bucket_name, dest_key, size, client=None, part_size=5*1024*1024, version_id=None):
 
-    if(client == None):
+def _multipart_copy(src_bucket_name, src_key, dest_bucket_name, dest_key, size, client=None, part_size=5 * 1024 * 1024,
+                    version_id=None):
+    if (client == None):
         client = get_client()
 
     response = client.create_multipart_upload(Bucket=dest_bucket_name, Key=dest_key)
     upload_id = response['UploadId']
 
-    if(version_id == None):
+    if (version_id == None):
         copy_source = {'Bucket': src_bucket_name, 'Key': src_key}
     else:
         copy_source = {'Bucket': src_bucket_name, 'Key': src_key, 'VersionId': version_id}
@@ -5858,18 +6192,20 @@ def _multipart_copy(src_bucket_name, src_key, dest_bucket_name, dest_key, size, 
     i = 0
     for start_offset in range(0, size, part_size):
         end_offset = min(start_offset + part_size - 1, size - 1)
-        part_num = i+1
+        part_num = i + 1
         copy_source_range = 'bytes={start}-{end}'.format(start=start_offset, end=end_offset)
-        response = client.upload_part_copy(Bucket=dest_bucket_name, Key=dest_key, CopySource=copy_source, PartNumber=part_num, UploadId=upload_id, CopySourceRange=copy_source_range)
+        response = client.upload_part_copy(Bucket=dest_bucket_name, Key=dest_key, CopySource=copy_source,
+                                           PartNumber=part_num, UploadId=upload_id, CopySourceRange=copy_source_range)
         parts.append({'ETag': response['CopyPartResult']['ETag'], 'PartNumber': part_num})
-        i = i+1
+        i = i + 1
 
     return (upload_id, parts)
+
 
 def _check_key_content(src_key, src_bucket_name, dest_key, dest_bucket_name, version_id=None):
     client = get_client()
 
-    if(version_id == None):
+    if (version_id == None):
         response = client.get_object(Bucket=src_bucket_name, Key=src_key)
     else:
         response = client.get_object(Bucket=src_bucket_name, Key=src_key, VersionId=version_id)
@@ -5878,15 +6214,16 @@ def _check_key_content(src_key, src_bucket_name, dest_key, dest_bucket_name, ver
     response = client.get_object(Bucket=dest_bucket_name, Key=dest_key)
     dest_size = response['ContentLength']
     dest_data = _get_body(response)
-    assert(src_size >= dest_size)
+    assert (src_size >= dest_size)
 
-    r = 'bytes={s}-{e}'.format(s=0, e=dest_size-1)
-    if(version_id == None):
+    r = 'bytes={s}-{e}'.format(s=0, e=dest_size - 1)
+    if (version_id == None):
         response = client.get_object(Bucket=src_bucket_name, Key=src_key, Range=r)
     else:
         response = client.get_object(Bucket=src_bucket_name, Key=src_key, Range=r, VersionId=version_id)
     src_data = _get_body(response)
     assert src_data == dest_data
+
 
 @pytest.mark.fails_on_dbstore
 def test_multipart_copy_small():
@@ -5899,11 +6236,13 @@ def test_multipart_copy_small():
     client = get_client()
 
     (upload_id, parts) = _multipart_copy(src_bucket_name, src_key, dest_bucket_name, dest_key, size)
-    client.complete_multipart_upload(Bucket=dest_bucket_name, Key=dest_key, UploadId=upload_id, MultipartUpload={'Parts': parts})
+    client.complete_multipart_upload(Bucket=dest_bucket_name, Key=dest_key, UploadId=upload_id,
+                                     MultipartUpload={'Parts': parts})
 
     response = client.get_object(Bucket=dest_bucket_name, Key=dest_key)
     assert size == response['ContentLength']
     _check_key_content(src_key, src_bucket_name, dest_key, dest_bucket_name)
+
 
 def test_multipart_copy_invalid_range():
     client = get_client()
@@ -5916,11 +6255,12 @@ def test_multipart_copy_invalid_range():
     copy_source = {'Bucket': src_bucket_name, 'Key': src_key}
     copy_source_range = 'bytes={start}-{end}'.format(start=0, end=21)
 
-    e = assert_raises(ClientError, client.upload_part_copy,Bucket=src_bucket_name, Key='dest', UploadId=upload_id, CopySource=copy_source, CopySourceRange=copy_source_range, PartNumber=1)
+    e = assert_raises(ClientError, client.upload_part_copy, Bucket=src_bucket_name, Key='dest', UploadId=upload_id,
+                      CopySource=copy_source, CopySourceRange=copy_source_range, PartNumber=1)
     status, error_code = _get_status_and_error_code(e.response)
     valid_status = [400, 416]
     if not status in valid_status:
-       raise AssertionError("Invalid response " + str(status))
+        raise AssertionError("Invalid response " + str(status))
     assert error_code == 'InvalidRange'
 
 
@@ -5971,14 +6311,17 @@ def test_multipart_copy_without_range():
     part_num = 1
     copy_source_range = 'bytes={start}-{end}'.format(start=0, end=9)
 
-    response = client.upload_part_copy(Bucket=dest_bucket_name, Key=dest_key, CopySource=copy_source, PartNumber=part_num, UploadId=upload_id)
+    response = client.upload_part_copy(Bucket=dest_bucket_name, Key=dest_key, CopySource=copy_source,
+                                       PartNumber=part_num, UploadId=upload_id)
 
     parts.append({'ETag': response['CopyPartResult']['ETag'], 'PartNumber': part_num})
-    client.complete_multipart_upload(Bucket=dest_bucket_name, Key=dest_key, UploadId=upload_id, MultipartUpload={'Parts': parts})
+    client.complete_multipart_upload(Bucket=dest_bucket_name, Key=dest_key, UploadId=upload_id,
+                                     MultipartUpload={'Parts': parts})
 
     response = client.get_object(Bucket=dest_bucket_name, Key=dest_key)
     assert response['ContentLength'] == 10
     _check_key_content(src_key, src_bucket_name, dest_key, dest_bucket_name)
+
 
 @pytest.mark.fails_on_dbstore
 def test_multipart_copy_special_names():
@@ -5993,10 +6336,12 @@ def test_multipart_copy_special_names():
     for src_key in (' ', '_', '__', '?versionId'):
         _create_key_with_random_content(src_key, bucket_name=src_bucket_name)
         (upload_id, parts) = _multipart_copy(src_bucket_name, src_key, dest_bucket_name, dest_key, size)
-        response = client.complete_multipart_upload(Bucket=dest_bucket_name, Key=dest_key, UploadId=upload_id, MultipartUpload={'Parts': parts})
+        response = client.complete_multipart_upload(Bucket=dest_bucket_name, Key=dest_key, UploadId=upload_id,
+                                                    MultipartUpload={'Parts': parts})
         response = client.get_object(Bucket=dest_bucket_name, Key=dest_key)
         assert size == response['ContentLength']
         _check_key_content(src_key, src_bucket_name, dest_key, dest_bucket_name)
+
 
 def _check_content_using_range(key, bucket_name, data, step):
     client = get_client()
@@ -6012,18 +6357,20 @@ def _check_content_using_range(key, bucket_name, data, step):
         response = client.get_object(Bucket=bucket_name, Key=key, Range=r)
         assert response['ContentLength'] == toread
         body = _get_body(response)
-        assert body == data[ofs:end+1]
+        assert body == data[ofs:end + 1]
+
 
 @pytest.mark.fails_on_dbstore
 def test_multipart_upload():
     bucket_name = get_new_bucket()
-    key="mymultipart"
-    content_type='text/bla'
+    key = "mymultipart"
+    content_type = 'text/bla'
     objlen = 30 * 1024 * 1024
     metadata = {'foo': 'bar'}
     client = get_client()
 
-    (upload_id, data, parts) = _multipart_upload(bucket_name=bucket_name, key=key, size=objlen, content_type=content_type, metadata=metadata)
+    (upload_id, data, parts) = _multipart_upload(bucket_name=bucket_name, key=key, size=objlen,
+                                                 content_type=content_type, metadata=metadata)
     client.complete_multipart_upload(Bucket=bucket_name, Key=key, UploadId=upload_id, MultipartUpload={'Parts': parts})
     # check extra client.complete_multipart_upload
     client.complete_multipart_upload(Bucket=bucket_name, Key=key, UploadId=upload_id, MultipartUpload={'Parts': parts})
@@ -6042,6 +6389,7 @@ def test_multipart_upload():
     _check_content_using_range(key, bucket_name, data, 1000000)
     _check_content_using_range(key, bucket_name, data, 10000000)
 
+
 def check_versioning(bucket_name, status):
     client = get_client()
 
@@ -6050,6 +6398,7 @@ def check_versioning(bucket_name, status):
         assert response['Status'] == status
     except KeyError:
         assert status == None
+
 
 # amazon is eventual consistent, retry a bit if failed
 def check_configure_versioning_retry(bucket_name, status, expected_string):
@@ -6072,6 +6421,7 @@ def check_configure_versioning_retry(bucket_name, status, expected_string):
 
     assert expected_string == read_status
 
+@pytest.mark.versioning
 @pytest.mark.fails_on_dbstore
 def test_multipart_copy_versioned():
     src_bucket_name = get_new_bucket()
@@ -6096,16 +6446,20 @@ def test_multipart_copy_versioned():
 
     for vid in version_id:
         (upload_id, parts) = _multipart_copy(src_bucket_name, src_key, dest_bucket_name, dest_key, size, version_id=vid)
-        response = client.complete_multipart_upload(Bucket=dest_bucket_name, Key=dest_key, UploadId=upload_id, MultipartUpload={'Parts': parts})
+        response = client.complete_multipart_upload(Bucket=dest_bucket_name, Key=dest_key, UploadId=upload_id,
+                                                    MultipartUpload={'Parts': parts})
         response = client.get_object(Bucket=dest_bucket_name, Key=dest_key)
         assert size == response['ContentLength']
         _check_key_content(src_key, src_bucket_name, dest_key, dest_bucket_name, version_id=vid)
+
 
 def _check_upload_multipart_resend(bucket_name, key, objlen, resend_parts):
     content_type = 'text/bla'
     metadata = {'foo': 'bar'}
     client = get_client()
-    (upload_id, data, parts) = _multipart_upload(bucket_name=bucket_name, key=key, size=objlen, content_type=content_type, metadata=metadata, resend_parts=resend_parts)
+    (upload_id, data, parts) = _multipart_upload(bucket_name=bucket_name, key=key, size=objlen,
+                                                 content_type=content_type, metadata=metadata,
+                                                 resend_parts=resend_parts)
     client.complete_multipart_upload(Bucket=bucket_name, Key=key, UploadId=upload_id, MultipartUpload={'Parts': parts})
 
     response = client.get_object(Bucket=bucket_name, Key=key)
@@ -6118,103 +6472,116 @@ def _check_upload_multipart_resend(bucket_name, key, objlen, resend_parts):
     _check_content_using_range(key, bucket_name, data, 1000000)
     _check_content_using_range(key, bucket_name, data, 10000000)
 
+
 @pytest.mark.fails_on_dbstore
 def test_multipart_upload_resend_part():
     bucket_name = get_new_bucket()
-    key="mymultipart"
+    key = "mymultipart"
     objlen = 30 * 1024 * 1024
 
     _check_upload_multipart_resend(bucket_name, key, objlen, [0])
     _check_upload_multipart_resend(bucket_name, key, objlen, [1])
     _check_upload_multipart_resend(bucket_name, key, objlen, [2])
-    _check_upload_multipart_resend(bucket_name, key, objlen, [1,2])
-    _check_upload_multipart_resend(bucket_name, key, objlen, [0,1,2,3,4,5])
+    _check_upload_multipart_resend(bucket_name, key, objlen, [1, 2])
+    _check_upload_multipart_resend(bucket_name, key, objlen, [0, 1, 2, 3, 4, 5])
+
 
 def test_multipart_upload_multiple_sizes():
     bucket_name = get_new_bucket()
-    key="mymultipart"
+    key = "mymultipart"
     client = get_client()
 
-    objlen = 5*1024*1024
+    objlen = 5 * 1024 * 1024
     (upload_id, data, parts) = _multipart_upload(bucket_name=bucket_name, key=key, size=objlen)
     client.complete_multipart_upload(Bucket=bucket_name, Key=key, UploadId=upload_id, MultipartUpload={'Parts': parts})
 
-    objlen = 5*1024*1024+100*1024
+    objlen = 5 * 1024 * 1024 + 100 * 1024
     (upload_id, data, parts) = _multipart_upload(bucket_name=bucket_name, key=key, size=objlen)
     client.complete_multipart_upload(Bucket=bucket_name, Key=key, UploadId=upload_id, MultipartUpload={'Parts': parts})
 
-    objlen = 5*1024*1024+600*1024
+    objlen = 5 * 1024 * 1024 + 600 * 1024
     (upload_id, data, parts) = _multipart_upload(bucket_name=bucket_name, key=key, size=objlen)
     client.complete_multipart_upload(Bucket=bucket_name, Key=key, UploadId=upload_id, MultipartUpload={'Parts': parts})
 
-    objlen = 10*1024*1024+100*1024
+    objlen = 10 * 1024 * 1024 + 100 * 1024
     (upload_id, data, parts) = _multipart_upload(bucket_name=bucket_name, key=key, size=objlen)
     client.complete_multipart_upload(Bucket=bucket_name, Key=key, UploadId=upload_id, MultipartUpload={'Parts': parts})
 
-    objlen = 10*1024*1024+600*1024
+    objlen = 10 * 1024 * 1024 + 600 * 1024
     (upload_id, data, parts) = _multipart_upload(bucket_name=bucket_name, key=key, size=objlen)
     client.complete_multipart_upload(Bucket=bucket_name, Key=key, UploadId=upload_id, MultipartUpload={'Parts': parts})
 
-    objlen = 10*1024*1024
+    objlen = 10 * 1024 * 1024
     (upload_id, data, parts) = _multipart_upload(bucket_name=bucket_name, key=key, size=objlen)
     client.complete_multipart_upload(Bucket=bucket_name, Key=key, UploadId=upload_id, MultipartUpload={'Parts': parts})
+
 
 @pytest.mark.fails_on_dbstore
 def test_multipart_copy_multiple_sizes():
     src_key = 'foo'
-    src_bucket_name = _create_key_with_random_content(src_key, 12*1024*1024)
+    src_bucket_name = _create_key_with_random_content(src_key, 12 * 1024 * 1024)
 
     dest_bucket_name = get_new_bucket()
-    dest_key="mymultipart"
+    dest_key = "mymultipart"
     client = get_client()
 
-    size = 5*1024*1024
+    size = 5 * 1024 * 1024
     (upload_id, parts) = _multipart_copy(src_bucket_name, src_key, dest_bucket_name, dest_key, size)
-    client.complete_multipart_upload(Bucket=dest_bucket_name, Key=dest_key, UploadId=upload_id, MultipartUpload={'Parts': parts})
+    client.complete_multipart_upload(Bucket=dest_bucket_name, Key=dest_key, UploadId=upload_id,
+                                     MultipartUpload={'Parts': parts})
     _check_key_content(src_key, src_bucket_name, dest_key, dest_bucket_name)
 
-    size = 5*1024*1024+100*1024
+    size = 5 * 1024 * 1024 + 100 * 1024
     (upload_id, parts) = _multipart_copy(src_bucket_name, src_key, dest_bucket_name, dest_key, size)
-    client.complete_multipart_upload(Bucket=dest_bucket_name, Key=dest_key, UploadId=upload_id, MultipartUpload={'Parts': parts})
+    client.complete_multipart_upload(Bucket=dest_bucket_name, Key=dest_key, UploadId=upload_id,
+                                     MultipartUpload={'Parts': parts})
     _check_key_content(src_key, src_bucket_name, dest_key, dest_bucket_name)
 
-    size = 5*1024*1024+600*1024
+    size = 5 * 1024 * 1024 + 600 * 1024
     (upload_id, parts) = _multipart_copy(src_bucket_name, src_key, dest_bucket_name, dest_key, size)
-    client.complete_multipart_upload(Bucket=dest_bucket_name, Key=dest_key, UploadId=upload_id, MultipartUpload={'Parts': parts})
+    client.complete_multipart_upload(Bucket=dest_bucket_name, Key=dest_key, UploadId=upload_id,
+                                     MultipartUpload={'Parts': parts})
     _check_key_content(src_key, src_bucket_name, dest_key, dest_bucket_name)
 
-    size = 10*1024*1024+100*1024
+    size = 10 * 1024 * 1024 + 100 * 1024
     (upload_id, parts) = _multipart_copy(src_bucket_name, src_key, dest_bucket_name, dest_key, size)
-    client.complete_multipart_upload(Bucket=dest_bucket_name, Key=dest_key, UploadId=upload_id, MultipartUpload={'Parts': parts})
+    client.complete_multipart_upload(Bucket=dest_bucket_name, Key=dest_key, UploadId=upload_id,
+                                     MultipartUpload={'Parts': parts})
     _check_key_content(src_key, src_bucket_name, dest_key, dest_bucket_name)
 
-    size = 10*1024*1024+600*1024
+    size = 10 * 1024 * 1024 + 600 * 1024
     (upload_id, parts) = _multipart_copy(src_bucket_name, src_key, dest_bucket_name, dest_key, size)
-    client.complete_multipart_upload(Bucket=dest_bucket_name, Key=dest_key, UploadId=upload_id, MultipartUpload={'Parts': parts})
+    client.complete_multipart_upload(Bucket=dest_bucket_name, Key=dest_key, UploadId=upload_id,
+                                     MultipartUpload={'Parts': parts})
     _check_key_content(src_key, src_bucket_name, dest_key, dest_bucket_name)
 
-    size = 10*1024*1024
+    size = 10 * 1024 * 1024
     (upload_id, parts) = _multipart_copy(src_bucket_name, src_key, dest_bucket_name, dest_key, size)
-    client.complete_multipart_upload(Bucket=dest_bucket_name, Key=dest_key, UploadId=upload_id, MultipartUpload={'Parts': parts})
+    client.complete_multipart_upload(Bucket=dest_bucket_name, Key=dest_key, UploadId=upload_id,
+                                     MultipartUpload={'Parts': parts})
     _check_key_content(src_key, src_bucket_name, dest_key, dest_bucket_name)
+
 
 def test_multipart_upload_size_too_small():
     bucket_name = get_new_bucket()
-    key="mymultipart"
+    key = "mymultipart"
     client = get_client()
 
-    size = 100*1024
-    (upload_id, data, parts) = _multipart_upload(bucket_name=bucket_name, key=key, size=size, part_size=10*1024)
-    e = assert_raises(ClientError, client.complete_multipart_upload, Bucket=bucket_name, Key=key, UploadId=upload_id, MultipartUpload={'Parts': parts})
+    size = 100 * 1024
+    (upload_id, data, parts) = _multipart_upload(bucket_name=bucket_name, key=key, size=size, part_size=10 * 1024)
+    e = assert_raises(ClientError, client.complete_multipart_upload, Bucket=bucket_name, Key=key, UploadId=upload_id,
+                      MultipartUpload={'Parts': parts})
     status, error_code = _get_status_and_error_code(e.response)
     assert status == 400
     assert error_code == 'EntityTooSmall'
 
+
 def gen_rand_string(size, chars=string.ascii_uppercase + string.digits):
     return ''.join(random.choice(chars) for _ in range(size))
 
+
 def _do_test_multipart_upload_contents(bucket_name, key, num_parts):
-    payload=gen_rand_string(5)*1024*1024
+    payload = gen_rand_string(5) * 1024 * 1024
     client = get_client()
 
     response = client.create_multipart_upload(Bucket=bucket_name, Key=key)
@@ -6224,38 +6591,41 @@ def _do_test_multipart_upload_contents(bucket_name, key, num_parts):
 
     for part_num in range(0, num_parts):
         part = bytes(payload, 'utf-8')
-        response = client.upload_part(UploadId=upload_id, Bucket=bucket_name, Key=key, PartNumber=part_num+1, Body=part)
-        parts.append({'ETag': response['ETag'].strip('"'), 'PartNumber': part_num+1})
+        response = client.upload_part(UploadId=upload_id, Bucket=bucket_name, Key=key, PartNumber=part_num + 1,
+                                      Body=part)
+        parts.append({'ETag': response['ETag'].strip('"'), 'PartNumber': part_num + 1})
 
-    last_payload = '123'*1024*1024
+    last_payload = '123' * 1024 * 1024
     last_part = bytes(last_payload, 'utf-8')
-    response = client.upload_part(UploadId=upload_id, Bucket=bucket_name, Key=key, PartNumber=num_parts+1, Body=last_part)
-    parts.append({'ETag': response['ETag'].strip('"'), 'PartNumber': num_parts+1})
+    response = client.upload_part(UploadId=upload_id, Bucket=bucket_name, Key=key, PartNumber=num_parts + 1,
+                                  Body=last_part)
+    parts.append({'ETag': response['ETag'].strip('"'), 'PartNumber': num_parts + 1})
 
     client.complete_multipart_upload(Bucket=bucket_name, Key=key, UploadId=upload_id, MultipartUpload={'Parts': parts})
 
     response = client.get_object(Bucket=bucket_name, Key=key)
     test_string = _get_body(response)
 
-    all_payload = payload*num_parts + last_payload
+    all_payload = payload * num_parts + last_payload
 
     assert test_string == all_payload
 
     return all_payload
+
 
 @pytest.mark.fails_on_dbstore
 def test_multipart_upload_contents():
     bucket_name = get_new_bucket()
     _do_test_multipart_upload_contents(bucket_name, 'mymultipart', 3)
 
+
 def test_multipart_upload_overwrite_existing_object():
     bucket_name = get_new_bucket()
     client = get_client()
     key = 'mymultipart'
-    payload='12345'*1024*1024
-    num_parts=2
+    payload = '12345' * 1024 * 1024
+    num_parts = 2
     client.put_object(Bucket=bucket_name, Key=key, Body=payload)
-
 
     response = client.create_multipart_upload(Bucket=bucket_name, Key=key)
     upload_id = response['UploadId']
@@ -6263,19 +6633,21 @@ def test_multipart_upload_overwrite_existing_object():
     parts = []
 
     for part_num in range(0, num_parts):
-        response = client.upload_part(UploadId=upload_id, Bucket=bucket_name, Key=key, PartNumber=part_num+1, Body=payload)
-        parts.append({'ETag': response['ETag'].strip('"'), 'PartNumber': part_num+1})
+        response = client.upload_part(UploadId=upload_id, Bucket=bucket_name, Key=key, PartNumber=part_num + 1,
+                                      Body=payload)
+        parts.append({'ETag': response['ETag'].strip('"'), 'PartNumber': part_num + 1})
 
     client.complete_multipart_upload(Bucket=bucket_name, Key=key, UploadId=upload_id, MultipartUpload={'Parts': parts})
 
     response = client.get_object(Bucket=bucket_name, Key=key)
     test_string = _get_body(response)
 
-    assert test_string == payload*num_parts
+    assert test_string == payload * num_parts
+
 
 def test_abort_multipart_upload():
     bucket_name = get_new_bucket()
-    key="mymultipart"
+    key = "mymultipart"
     objlen = 10 * 1024 * 1024
     client = get_client()
 
@@ -6285,10 +6657,11 @@ def test_abort_multipart_upload():
     response = client.list_objects_v2(Bucket=bucket_name, Prefix=key)
     assert 'Contents' not in response
 
+
 def test_abort_multipart_upload_not_found():
     bucket_name = get_new_bucket()
     client = get_client()
-    key="mymultipart"
+    key = "mymultipart"
     client.put_object(Bucket=bucket_name, Key=key)
 
     e = assert_raises(ClientError, client.abort_multipart_upload, Bucket=bucket_name, Key=key, UploadId='56788')
@@ -6296,21 +6669,22 @@ def test_abort_multipart_upload_not_found():
     assert status == 404
     assert error_code == 'NoSuchUpload'
 
+
 @pytest.mark.fails_on_dbstore
 def test_list_multipart_upload():
     bucket_name = get_new_bucket()
     client = get_client()
-    key="mymultipart"
+    key = "mymultipart"
     mb = 1024 * 1024
 
     upload_ids = []
-    (upload_id1, data, parts) = _multipart_upload(bucket_name=bucket_name, key=key, size=5*mb)
+    (upload_id1, data, parts) = _multipart_upload(bucket_name=bucket_name, key=key, size=5 * mb)
     upload_ids.append(upload_id1)
-    (upload_id2, data, parts) = _multipart_upload(bucket_name=bucket_name, key=key, size=6*mb)
+    (upload_id2, data, parts) = _multipart_upload(bucket_name=bucket_name, key=key, size=6 * mb)
     upload_ids.append(upload_id2)
 
-    key2="mymultipart2"
-    (upload_id3, data, parts) = _multipart_upload(bucket_name=bucket_name, key=key2, size=5*mb)
+    key2 = "mymultipart2"
+    (upload_id3, data, parts) = _multipart_upload(bucket_name=bucket_name, key=key2, size=5 * mb)
     upload_ids.append(upload_id3)
 
     response = client.list_multipart_uploads(Bucket=bucket_name)
@@ -6327,6 +6701,7 @@ def test_list_multipart_upload():
     client.abort_multipart_upload(Bucket=bucket_name, Key=key, UploadId=upload_id2)
     client.abort_multipart_upload(Bucket=bucket_name, Key=key2, UploadId=upload_id3)
 
+
 @pytest.mark.fails_on_dbstore
 def test_list_multipart_upload_owner():
     bucket_name = get_new_bucket()
@@ -6336,7 +6711,7 @@ def test_list_multipart_upload_owner():
     name1 = get_main_display_name()
 
     client2 = get_alt_client()
-    user2  = get_alt_user_id()
+    user2 = get_alt_user_id()
     name2 = get_alt_display_name()
 
     # add bucket acl for public read/write access
@@ -6373,43 +6748,50 @@ def test_list_multipart_upload_owner():
     finally:
         client1.abort_multipart_upload(Bucket=bucket_name, Key=key1, UploadId=upload1)
 
+
 def test_multipart_upload_missing_part():
     bucket_name = get_new_bucket()
     client = get_client()
-    key="mymultipart"
+    key = "mymultipart"
     size = 1
 
     response = client.create_multipart_upload(Bucket=bucket_name, Key=key)
     upload_id = response['UploadId']
 
     parts = []
-    response = client.upload_part(UploadId=upload_id, Bucket=bucket_name, Key=key, PartNumber=1, Body=bytes('\x00', 'utf-8'))
+    response = client.upload_part(UploadId=upload_id, Bucket=bucket_name, Key=key, PartNumber=1,
+                                  Body=bytes('\x00', 'utf-8'))
     # 'PartNumber should be 1'
     parts.append({'ETag': response['ETag'].strip('"'), 'PartNumber': 9999})
 
-    e = assert_raises(ClientError, client.complete_multipart_upload, Bucket=bucket_name, Key=key, UploadId=upload_id, MultipartUpload={'Parts': parts})
+    e = assert_raises(ClientError, client.complete_multipart_upload, Bucket=bucket_name, Key=key, UploadId=upload_id,
+                      MultipartUpload={'Parts': parts})
     status, error_code = _get_status_and_error_code(e.response)
     assert status == 400
     assert error_code == 'InvalidPart'
+
 
 def test_multipart_upload_incorrect_etag():
     bucket_name = get_new_bucket()
     client = get_client()
-    key="mymultipart"
+    key = "mymultipart"
     size = 1
 
     response = client.create_multipart_upload(Bucket=bucket_name, Key=key)
     upload_id = response['UploadId']
 
     parts = []
-    response = client.upload_part(UploadId=upload_id, Bucket=bucket_name, Key=key, PartNumber=1, Body=bytes('\x00', 'utf-8'))
+    response = client.upload_part(UploadId=upload_id, Bucket=bucket_name, Key=key, PartNumber=1,
+                                  Body=bytes('\x00', 'utf-8'))
     # 'ETag' should be "93b885adfe0da089cdf634904fd59f71"
     parts.append({'ETag': "ffffffffffffffffffffffffffffffff", 'PartNumber': 1})
 
-    e = assert_raises(ClientError, client.complete_multipart_upload, Bucket=bucket_name, Key=key, UploadId=upload_id, MultipartUpload={'Parts': parts})
+    e = assert_raises(ClientError, client.complete_multipart_upload, Bucket=bucket_name, Key=key, UploadId=upload_id,
+                      MultipartUpload={'Parts': parts})
     status, error_code = _get_status_and_error_code(e.response)
     assert status == 400
     assert error_code == 'InvalidPart'
+
 
 @pytest.mark.fails_on_dbstore
 def test_multipart_get_part():
@@ -6417,8 +6799,8 @@ def test_multipart_get_part():
     client = get_client()
     key = "mymultipart"
 
-    part_size = 5*1024*1024
-    part_sizes = 3 * [part_size] + [1*1024*1024]
+    part_size = 5 * 1024 * 1024
+    part_sizes = 3 * [part_size] + [1 * 1024 * 1024]
     part_count = len(part_sizes)
     total_size = sum(part_sizes)
 
@@ -6453,6 +6835,7 @@ def test_multipart_get_part():
     assert status == 400
     assert error_code == 'InvalidPart'
 
+
 @pytest.mark.fails_on_dbstore
 def test_non_multipart_get_part():
     bucket_name = get_new_bucket()
@@ -6480,10 +6863,10 @@ def _simple_http_req_100_cont(host, port, is_secure, method, resource):
     and await confirmation.
     """
     req_str = '{method} {resource} HTTP/1.1\r\nHost: {host}\r\nAccept-Encoding: identity\r\nContent-Length: 123\r\nExpect: 100-continue\r\n\r\n'.format(
-            method=method,
-            resource=resource,
-            host=host,
-            )
+        method=method,
+        resource=resource,
+        host=host,
+    )
 
     req = bytes(req_str, 'utf-8')
 
@@ -6508,18 +6891,19 @@ def _simple_http_req_100_cont(host, port, is_secure, method, resource):
 
     return l[1]
 
+
 def test_100_continue():
     bucket_name = get_new_bucket_name()
     client = get_client()
     client.create_bucket(Bucket=bucket_name)
-    objname='testobj'
+    objname = 'testobj'
     resource = '/{bucket}/{obj}'.format(bucket=bucket_name, obj=objname)
 
     host = get_config_host()
     port = get_config_port()
     is_secure = get_config_is_secure()
 
-    #NOTES: this test needs to be tested when is_secure is True
+    # NOTES: this test needs to be tested when is_secure is True
     status = _simple_http_req_100_cont(host, port, is_secure, 'PUT', resource)
     assert status == '403'
 
@@ -6528,17 +6912,18 @@ def test_100_continue():
     status = _simple_http_req_100_cont(host, port, is_secure, 'PUT', resource)
     assert status == '100'
 
+
 def test_set_cors():
     bucket_name = get_new_bucket()
     client = get_client()
     allowed_methods = ['GET', 'PUT']
     allowed_origins = ['*.get', '*.put']
 
-    cors_config ={
+    cors_config = {
         'CORSRules': [
             {'AllowedMethods': allowed_methods,
              'AllowedOrigins': allowed_origins,
-            },
+             },
         ]
     }
 
@@ -6556,6 +6941,7 @@ def test_set_cors():
     status = _get_status(e.response)
     assert status == 404
 
+
 def _cors_request_and_check(func, url, headers, expect_status, expect_allow_origin, expect_allow_methods):
     r = func(url, headers=headers, verify=get_config_ssl_verify())
     assert r.status_code == expect_status
@@ -6563,24 +6949,25 @@ def _cors_request_and_check(func, url, headers, expect_status, expect_allow_orig
     assert r.headers.get('access-control-allow-origin', None) == expect_allow_origin
     assert r.headers.get('access-control-allow-methods', None) == expect_allow_methods
 
+
 def test_cors_origin_response():
     bucket_name = _setup_bucket_acl(bucket_acl='public-read')
     client = get_client()
 
-    cors_config ={
+    cors_config = {
         'CORSRules': [
             {'AllowedMethods': ['GET'],
              'AllowedOrigins': ['*suffix'],
-            },
+             },
             {'AllowedMethods': ['GET'],
              'AllowedOrigins': ['start*end'],
-            },
+             },
             {'AllowedMethods': ['GET'],
              'AllowedOrigins': ['prefix*'],
-            },
+             },
             {'AllowedMethods': ['PUT'],
              'AllowedOrigins': ['*.put'],
-            }
+             }
         ]
     }
 
@@ -6625,28 +7012,40 @@ def test_cors_origin_response():
     _cors_request_and_check(requests.options, url, {'Origin': 'foo.suffix'}, 400, None, None)
     _cors_request_and_check(requests.options, url, {'Origin': 'bla'}, 400, None, None)
     _cors_request_and_check(requests.options, obj_url, {'Origin': 'foo.suffix', 'Access-Control-Request-Method': 'GET',
-                                                    'content-length': '0'}, 200, 'foo.suffix', 'GET')
-    _cors_request_and_check(requests.options, url, {'Origin': 'foo.bar', 'Access-Control-Request-Method': 'GET'}, 403, None, None)
-    _cors_request_and_check(requests.options, url, {'Origin': 'foo.suffix.get', 'Access-Control-Request-Method': 'GET'}, 403, None, None)
-    _cors_request_and_check(requests.options, url, {'Origin': 'startend', 'Access-Control-Request-Method': 'GET'}, 200, 'startend', 'GET')
-    _cors_request_and_check(requests.options, url, {'Origin': 'start1end', 'Access-Control-Request-Method': 'GET'}, 200, 'start1end', 'GET')
-    _cors_request_and_check(requests.options, url, {'Origin': 'start12end', 'Access-Control-Request-Method': 'GET'}, 200, 'start12end', 'GET')
-    _cors_request_and_check(requests.options, url, {'Origin': '0start12end', 'Access-Control-Request-Method': 'GET'}, 403, None, None)
-    _cors_request_and_check(requests.options, url, {'Origin': 'prefix', 'Access-Control-Request-Method': 'GET'}, 200, 'prefix', 'GET')
-    _cors_request_and_check(requests.options, url, {'Origin': 'prefix.suffix', 'Access-Control-Request-Method': 'GET'}, 200, 'prefix.suffix', 'GET')
-    _cors_request_and_check(requests.options, url, {'Origin': 'bla.prefix', 'Access-Control-Request-Method': 'GET'}, 403, None, None)
-    _cors_request_and_check(requests.options, url, {'Origin': 'foo.put', 'Access-Control-Request-Method': 'GET'}, 403, None, None)
-    _cors_request_and_check(requests.options, url, {'Origin': 'foo.put', 'Access-Control-Request-Method': 'PUT'}, 200, 'foo.put', 'PUT')
+                                                        'content-length': '0'}, 200, 'foo.suffix', 'GET')
+    _cors_request_and_check(requests.options, url, {'Origin': 'foo.bar', 'Access-Control-Request-Method': 'GET'}, 403,
+                            None, None)
+    _cors_request_and_check(requests.options, url, {'Origin': 'foo.suffix.get', 'Access-Control-Request-Method': 'GET'},
+                            403, None, None)
+    _cors_request_and_check(requests.options, url, {'Origin': 'startend', 'Access-Control-Request-Method': 'GET'}, 200,
+                            'startend', 'GET')
+    _cors_request_and_check(requests.options, url, {'Origin': 'start1end', 'Access-Control-Request-Method': 'GET'}, 200,
+                            'start1end', 'GET')
+    _cors_request_and_check(requests.options, url, {'Origin': 'start12end', 'Access-Control-Request-Method': 'GET'},
+                            200, 'start12end', 'GET')
+    _cors_request_and_check(requests.options, url, {'Origin': '0start12end', 'Access-Control-Request-Method': 'GET'},
+                            403, None, None)
+    _cors_request_and_check(requests.options, url, {'Origin': 'prefix', 'Access-Control-Request-Method': 'GET'}, 200,
+                            'prefix', 'GET')
+    _cors_request_and_check(requests.options, url, {'Origin': 'prefix.suffix', 'Access-Control-Request-Method': 'GET'},
+                            200, 'prefix.suffix', 'GET')
+    _cors_request_and_check(requests.options, url, {'Origin': 'bla.prefix', 'Access-Control-Request-Method': 'GET'},
+                            403, None, None)
+    _cors_request_and_check(requests.options, url, {'Origin': 'foo.put', 'Access-Control-Request-Method': 'GET'}, 403,
+                            None, None)
+    _cors_request_and_check(requests.options, url, {'Origin': 'foo.put', 'Access-Control-Request-Method': 'PUT'}, 200,
+                            'foo.put', 'PUT')
+
 
 def test_cors_origin_wildcard():
     bucket_name = _setup_bucket_acl(bucket_acl='public-read')
     client = get_client()
 
-    cors_config ={
+    cors_config = {
         'CORSRules': [
             {'AllowedMethods': ['GET'],
              'AllowedOrigins': ['*'],
-            },
+             },
         ]
     }
 
@@ -6663,16 +7062,17 @@ def test_cors_origin_wildcard():
     _cors_request_and_check(requests.get, url, None, 200, None, None)
     _cors_request_and_check(requests.get, url, {'Origin': 'example.origin'}, 200, '*', 'GET')
 
+
 def test_cors_header_option():
     bucket_name = _setup_bucket_acl(bucket_acl='public-read')
     client = get_client()
 
-    cors_config ={
+    cors_config = {
         'CORSRules': [
             {'AllowedMethods': ['GET'],
              'AllowedOrigins': ['*'],
              'ExposeHeaders': ['x-amz-meta-header1'],
-            },
+             },
         ]
     }
 
@@ -6687,7 +7087,10 @@ def test_cors_header_option():
     url = _get_post_url(bucket_name)
     obj_url = '{u}/{o}'.format(u=url, o='bar')
 
-    _cors_request_and_check(requests.options, obj_url, {'Origin': 'example.origin','Access-Control-Request-Headers':'x-amz-meta-header2','Access-Control-Request-Method':'GET'}, 403, None, None)
+    _cors_request_and_check(requests.options, obj_url,
+                            {'Origin': 'example.origin', 'Access-Control-Request-Headers': 'x-amz-meta-header2',
+                             'Access-Control-Request-Method': 'GET'}, 403, None, None)
+
 
 def _test_cors_options_presigned_get_object(client):
     bucket_name = _setup_bucket_object_acl('public-read', 'public-read', client=client)
@@ -6701,29 +7104,33 @@ def _test_cors_options_presigned_get_object(client):
     allowed_methods = ['GET']
     allowed_origins = ['example']
 
-    cors_config ={
+    cors_config = {
         'CORSRules': [
             {'AllowedMethods': allowed_methods,
              'AllowedOrigins': allowed_origins,
-            },
+             },
         ]
     }
 
     client.put_bucket_cors(Bucket=bucket_name, CORSConfiguration=cors_config)
-    _cors_request_and_check(requests.options, url, {'Origin': 'example', 'Access-Control-Request-Method': 'GET'}, 200, 'example', 'GET')
+    _cors_request_and_check(requests.options, url, {'Origin': 'example', 'Access-Control-Request-Method': 'GET'}, 200,
+                            'example', 'GET')
+
 
 def test_cors_presigned_get_object():
     _test_cors_options_presigned_get_object(client=get_client())
 
+
 def test_cors_presigned_get_object_tenant():
     _test_cors_options_presigned_get_object(client=get_tenant_client())
+
 
 @pytest.mark.tagging
 def test_set_bucket_tagging():
     bucket_name = get_new_bucket()
     client = get_client()
 
-    tags={
+    tags = {
         'TagSet': [
             {
                 'Key': 'Hello',
@@ -6757,6 +7164,7 @@ class FakeFile(object):
     """
     file that simulates seek, tell, and current character
     """
+
     def __init__(self, char='A', interrupt=None):
         self.offset = 0
         self.char = bytes(char, 'utf-8')
@@ -6773,10 +7181,12 @@ class FakeFile(object):
     def tell(self):
         return self.offset
 
+
 class FakeWriteFile(FakeFile):
     """
     file that simulates interruptable reads of constant data
     """
+
     def __init__(self, size, char='A', interrupt=None):
         FakeFile.__init__(self, char, interrupt)
         self.size = size
@@ -6791,12 +7201,14 @@ class FakeWriteFile(FakeFile):
         if self.interrupt != None and self.offset == self.size and count > 0:
             self.interrupt()
 
-        return self.char*count
+        return self.char * count
+
 
 class FakeReadFile(FakeFile):
     """
     file that simulates writes, interrupting after the second
     """
+
     def __init__(self, size, char='A', interrupt=None):
         FakeFile.__init__(self, char, interrupt)
         self.interrupted = False
@@ -6804,7 +7216,7 @@ class FakeReadFile(FakeFile):
         self.expected_size = size
 
     def write(self, chars):
-        assert chars == self.char*len(chars)
+        assert chars == self.char * len(chars)
         self.offset += len(chars)
         self.size += len(chars)
 
@@ -6817,10 +7229,12 @@ class FakeReadFile(FakeFile):
     def close(self):
         assert self.size == self.expected_size
 
+
 class FakeFileVerifier(object):
     """
     file that verifies expected data has been written
     """
+
     def __init__(self, char=None):
         self.char = char
         self.size = 0
@@ -6830,7 +7244,8 @@ class FakeFileVerifier(object):
         if self.char == None:
             self.char = data[0]
         self.size += size
-        assert data.decode() == self.char*size
+        assert data.decode() == self.char * size
+
 
 def _verify_atomic_key_data(bucket_name, key, size=-1, char=None):
     """
@@ -6842,6 +7257,7 @@ def _verify_atomic_key_data(bucket_name, key, size=-1, char=None):
     if size >= 0:
         assert fp_verify.size == size
 
+
 def _test_atomic_read(file_size):
     """
     Create a file of A's, use it to set_contents_from_file.
@@ -6851,14 +7267,13 @@ def _test_atomic_read(file_size):
     bucket_name = get_new_bucket()
     client = get_client()
 
-
     fp_a = FakeWriteFile(file_size, 'A')
     client.put_object(Bucket=bucket_name, Key='testobj', Body=fp_a)
 
     fp_b = FakeWriteFile(file_size, 'B')
     fp_a2 = FakeReadFile(file_size, 'A',
-        lambda: client.put_object(Bucket=bucket_name, Key='testobj', Body=fp_b)
-        )
+                         lambda: client.put_object(Bucket=bucket_name, Key='testobj', Body=fp_b)
+                         )
 
     read_client = get_client()
 
@@ -6867,14 +7282,18 @@ def _test_atomic_read(file_size):
 
     _verify_atomic_key_data(bucket_name, 'testobj', file_size, 'B')
 
+
 def test_atomic_read_1mb():
-    _test_atomic_read(1024*1024)
+    _test_atomic_read(1024 * 1024)
+
 
 def test_atomic_read_4mb():
-    _test_atomic_read(1024*1024*4)
+    _test_atomic_read(1024 * 1024 * 4)
+
 
 def test_atomic_read_8mb():
-    _test_atomic_read(1024*1024*8)
+    _test_atomic_read(1024 * 1024 * 8)
+
 
 def _test_atomic_write(file_size):
     """
@@ -6888,11 +7307,9 @@ def _test_atomic_write(file_size):
     client = get_client()
     objname = 'testobj'
 
-
     # create <file_size> file of A's
     fp_a = FakeWriteFile(file_size, 'A')
     client.put_object(Bucket=bucket_name, Key=objname, Body=fp_a)
-
 
     # verify A's
     _verify_atomic_key_data(bucket_name, objname, file_size, 'A')
@@ -6900,22 +7317,26 @@ def _test_atomic_write(file_size):
     # create <file_size> file of B's
     # but try to verify the file before we finish writing all the B's
     fp_b = FakeWriteFile(file_size, 'B',
-        lambda: _verify_atomic_key_data(bucket_name, objname, file_size, 'A')
-        )
+                         lambda: _verify_atomic_key_data(bucket_name, objname, file_size, 'A')
+                         )
 
     client.put_object(Bucket=bucket_name, Key=objname, Body=fp_b)
 
     # verify B's
     _verify_atomic_key_data(bucket_name, objname, file_size, 'B')
 
+
 def test_atomic_write_1mb():
-    _test_atomic_write(1024*1024)
+    _test_atomic_write(1024 * 1024)
+
 
 def test_atomic_write_4mb():
-    _test_atomic_write(1024*1024*4)
+    _test_atomic_write(1024 * 1024 * 4)
+
 
 def test_atomic_write_8mb():
-    _test_atomic_write(1024*1024*8)
+    _test_atomic_write(1024 * 1024 * 8)
+
 
 def _test_atomic_dual_write(file_size):
     """
@@ -6941,14 +7362,18 @@ def _test_atomic_dual_write(file_size):
     # verify the file
     _verify_atomic_key_data(bucket_name, objname, file_size, 'B')
 
+
 def test_atomic_dual_write_1mb():
-    _test_atomic_dual_write(1024*1024)
+    _test_atomic_dual_write(1024 * 1024)
+
 
 def test_atomic_dual_write_4mb():
-    _test_atomic_dual_write(1024*1024*4)
+    _test_atomic_dual_write(1024 * 1024 * 4)
+
 
 def test_atomic_dual_write_8mb():
-    _test_atomic_dual_write(1024*1024*8)
+    _test_atomic_dual_write(1024 * 1024 * 8)
+
 
 def _test_atomic_conditional_write(file_size):
     """
@@ -6967,8 +7392,8 @@ def _test_atomic_conditional_write(file_size):
     client.put_object(Bucket=bucket_name, Key=objname, Body=fp_a)
 
     fp_b = FakeWriteFile(file_size, 'B',
-        lambda: _verify_atomic_key_data(bucket_name, objname, file_size, 'A')
-        )
+                         lambda: _verify_atomic_key_data(bucket_name, objname, file_size, 'A')
+                         )
 
     # create <file_size> file of B's
     # but try to verify the file before we finish writing all the B's
@@ -6979,9 +7404,11 @@ def _test_atomic_conditional_write(file_size):
     # verify B's
     _verify_atomic_key_data(bucket_name, objname, file_size, 'B')
 
+
 @pytest.mark.fails_on_aws
 def test_atomic_conditional_write_1mb():
-    _test_atomic_conditional_write(1024*1024)
+    _test_atomic_conditional_write(1024 * 1024)
+
 
 def _test_atomic_dual_conditional_write(file_size):
     """
@@ -7002,6 +7429,7 @@ def _test_atomic_dual_conditional_write(file_size):
     fp_b = FakeWriteFile(file_size, 'B')
     lf = (lambda **kwargs: kwargs['params']['headers'].update({'If-Match': etag_fp_a}))
     client.meta.events.register('before-call.s3.PutObject', lf)
+
     def rewind_put_fp_b():
         fp_b.seek(0)
         client.put_object(Bucket=bucket_name, Key=objname, Body=fp_b)
@@ -7016,11 +7444,13 @@ def _test_atomic_dual_conditional_write(file_size):
     # verify the file
     _verify_atomic_key_data(bucket_name, objname, file_size, 'B')
 
+
 @pytest.mark.fails_on_aws
 # TODO: test not passing with SSL, fix this
 @pytest.mark.fails_on_rgw
 def test_atomic_dual_conditional_write_1mb():
-    _test_atomic_dual_conditional_write(1024*1024)
+    _test_atomic_dual_conditional_write(1024 * 1024)
+
 
 @pytest.mark.fails_on_aws
 # TODO: test not passing with SSL, fix this
@@ -7033,12 +7463,13 @@ def test_atomic_write_bucket_gone():
         client.delete_bucket(Bucket=bucket_name)
 
     objname = 'foo'
-    fp_a = FakeWriteFile(1024*1024, 'A', remove_bucket)
+    fp_a = FakeWriteFile(1024 * 1024, 'A', remove_bucket)
 
     e = assert_raises(ClientError, client.put_object, Bucket=bucket_name, Key=objname, Body=fp_a)
     status, error_code = _get_status_and_error_code(e.response)
     assert status == 404
     assert error_code == 'NoSuchBucket'
+
 
 def test_atomic_multipart_upload_write():
     bucket_name = get_new_bucket()
@@ -7058,12 +7489,14 @@ def test_atomic_multipart_upload_write():
     body = _get_body(response)
     assert body == 'bar'
 
+
 class Counter:
     def __init__(self, default_val):
         self.val = default_val
 
     def inc(self):
         self.val = self.val + 1
+
 
 class ActionOnCount:
     def __init__(self, trigger_count, action):
@@ -7078,6 +7511,7 @@ class ActionOnCount:
         if self.count == self.trigger_count:
             self.result = self.action()
 
+
 def test_multipart_resend_first_finishes_last():
     bucket_name = get_new_bucket()
     client = get_client()
@@ -7086,7 +7520,7 @@ def test_multipart_resend_first_finishes_last():
     response = client.create_multipart_upload(Bucket=bucket_name, Key=key_name)
     upload_id = response['UploadId']
 
-    #file_size = 8*1024*1024
+    # file_size = 8*1024*1024
     file_size = 8
 
     counter = Counter(0)
@@ -7097,15 +7531,16 @@ def test_multipart_resend_first_finishes_last():
     # and count the number of reads
 
     fp_dry_run = FakeWriteFile(file_size, 'C',
-        lambda: counter.inc()
-        )
+                               lambda: counter.inc()
+                               )
 
     parts = []
 
     response = client.upload_part(UploadId=upload_id, Bucket=bucket_name, Key=key_name, PartNumber=1, Body=fp_dry_run)
 
     parts.append({'ETag': response['ETag'].strip('"'), 'PartNumber': 1})
-    client.complete_multipart_upload(Bucket=bucket_name, Key=key_name, UploadId=upload_id, MultipartUpload={'Parts': parts})
+    client.complete_multipart_upload(Bucket=bucket_name, Key=key_name, UploadId=upload_id,
+                                     MultipartUpload={'Parts': parts})
 
     client.delete_object(Bucket=bucket_name, Key=key_name)
 
@@ -7114,6 +7549,7 @@ def test_multipart_resend_first_finishes_last():
 
     # ok, now for the actual test
     fp_b = FakeWriteFile(file_size, 'B')
+
     def upload_fp_b():
         response = client.upload_part(UploadId=upload_id, Bucket=bucket_name, Key=key_name, Body=fp_b, PartNumber=1)
         parts.append({'ETag': response['ETag'].strip('"'), 'PartNumber': 1})
@@ -7124,15 +7560,17 @@ def test_multipart_resend_first_finishes_last():
     upload_id = response['UploadId']
 
     fp_a = FakeWriteFile(file_size, 'A',
-        lambda: action.trigger()
-        )
+                         lambda: action.trigger()
+                         )
 
     response = client.upload_part(UploadId=upload_id, Bucket=bucket_name, Key=key_name, PartNumber=1, Body=fp_a)
 
     parts.append({'ETag': response['ETag'].strip('"'), 'PartNumber': 1})
-    client.complete_multipart_upload(Bucket=bucket_name, Key=key_name, UploadId=upload_id, MultipartUpload={'Parts': parts})
+    client.complete_multipart_upload(Bucket=bucket_name, Key=key_name, UploadId=upload_id,
+                                     MultipartUpload={'Parts': parts})
 
     _verify_atomic_key_data(bucket_name, key_name, file_size, 'A')
+
 
 @pytest.mark.fails_on_dbstore
 def test_ranged_request_response_code():
@@ -7149,12 +7587,14 @@ def test_ranged_request_response_code():
     assert response['ResponseMetadata']['HTTPHeaders']['content-range'] == 'bytes 4-7/11'
     assert response['ResponseMetadata']['HTTPStatusCode'] == 206
 
+
 def _generate_random_string(size):
     return ''.join(random.choice(string.ascii_letters + string.digits) for _ in range(size))
 
+
 @pytest.mark.fails_on_dbstore
 def test_ranged_big_request_response_code():
-    content = _generate_random_string(8*1024*1024)
+    content = _generate_random_string(8 * 1024 * 1024)
 
     bucket_name = get_new_bucket()
     client = get_client()
@@ -7166,6 +7606,7 @@ def test_ranged_big_request_response_code():
     assert fetched_content == content[3145728:5242881]
     assert response['ResponseMetadata']['HTTPHeaders']['content-range'] == 'bytes 3145728-5242880/8388608'
     assert response['ResponseMetadata']['HTTPStatusCode'] == 206
+
 
 @pytest.mark.fails_on_dbstore
 def test_ranged_request_skip_leading_bytes_response_code():
@@ -7182,6 +7623,7 @@ def test_ranged_request_skip_leading_bytes_response_code():
     assert response['ResponseMetadata']['HTTPHeaders']['content-range'] == 'bytes 4-10/11'
     assert response['ResponseMetadata']['HTTPStatusCode'] == 206
 
+
 @pytest.mark.fails_on_dbstore
 def test_ranged_request_return_trailing_bytes_response_code():
     content = 'testcontent'
@@ -7197,6 +7639,7 @@ def test_ranged_request_return_trailing_bytes_response_code():
     assert response['ResponseMetadata']['HTTPHeaders']['content-range'] == 'bytes 4-10/11'
     assert response['ResponseMetadata']['HTTPStatusCode'] == 206
 
+
 def test_ranged_request_invalid_range():
     content = 'testcontent'
 
@@ -7210,6 +7653,7 @@ def test_ranged_request_invalid_range():
     status, error_code = _get_status_and_error_code(e.response)
     assert status == 416
     assert error_code == 'InvalidRange'
+
 
 def test_ranged_request_empty_object():
     content = ''
@@ -7225,6 +7669,10 @@ def test_ranged_request_empty_object():
     assert status == 416
     assert error_code == 'InvalidRange'
 
+
+@pytest.mark.versioning
+# # @pytest.mark.skip(reason="we cannot suspend bucket versioning before enabling it first")
+@allure.description("we cannot suspend bucket versioning before enabling it first")
 def test_versioning_bucket_create_suspend():
     bucket_name = get_new_bucket()
     check_versioning(bucket_name, None)
@@ -7234,6 +7682,7 @@ def test_versioning_bucket_create_suspend():
     check_configure_versioning_retry(bucket_name, "Enabled", "Enabled")
     check_configure_versioning_retry(bucket_name, "Suspended", "Suspended")
 
+
 def check_obj_content(client, bucket_name, key, version_id, content):
     response = client.get_object(Bucket=bucket_name, Key=key, VersionId=version_id)
     if content is not None:
@@ -7241,6 +7690,7 @@ def check_obj_content(client, bucket_name, key, version_id, content):
         assert body == content
     else:
         assert response['DeleteMarker'] == True
+
 
 def check_obj_versions(client, bucket_name, key, version_ids, contents):
     # check to see if objects is pointing at correct version
@@ -7258,7 +7708,9 @@ def check_obj_versions(client, bucket_name, key, version_ids, contents):
         check_obj_content(client, bucket_name, key, version['VersionId'], contents[i])
         i += 1
 
-def create_multiple_versions(client, bucket_name, key, num_versions, version_ids = None, contents = None, check_versions = True):
+
+def create_multiple_versions(client, bucket_name, key, num_versions, version_ids=None, contents=None,
+                             check_versions=True):
     contents = contents or []
     version_ids = version_ids or []
 
@@ -7270,10 +7722,11 @@ def create_multiple_versions(client, bucket_name, key, num_versions, version_ids
         contents.append(body)
         version_ids.append(version_id)
 
-#    if check_versions:
-#        check_obj_versions(client, bucket_name, key, version_ids, contents)
+    #    if check_versions:
+    #        check_obj_versions(client, bucket_name, key, version_ids, contents)
 
     return (version_ids, contents)
+
 
 def remove_obj_version(client, bucket_name, key, version_ids, contents, index):
     assert len(version_ids) == len(contents)
@@ -7288,11 +7741,13 @@ def remove_obj_version(client, bucket_name, key, version_ids, contents, index):
     if len(version_ids) != 0:
         check_obj_versions(client, bucket_name, key, version_ids, contents)
 
+
 def clean_up_bucket(client, bucket_name, key, version_ids):
     for version_id in version_ids:
         client.delete_object(Bucket=bucket_name, Key=key, VersionId=version_id)
 
     client.delete_bucket(Bucket=bucket_name)
+
 
 def _do_test_create_remove_versions(client, bucket_name, key, num_versions, remove_start_idx, idx_inc):
     (version_ids, contents) = create_multiple_versions(client, bucket_name, key, num_versions)
@@ -7308,10 +7763,12 @@ def _do_test_create_remove_versions(client, bucket_name, key, num_versions, remo
         print(response['Versions'])
 
 
+@pytest.mark.versioning
 def test_versioning_obj_create_read_remove():
     bucket_name = get_new_bucket()
     client = get_client()
-    client.put_bucket_versioning(Bucket=bucket_name, VersioningConfiguration={'MFADelete': 'Disabled', 'Status': 'Enabled'})
+    client.put_bucket_versioning(Bucket=bucket_name,
+                                 VersioningConfiguration={'MFADelete': 'Disabled', 'Status': 'Enabled'})
     key = 'testobj'
     num_versions = 5
 
@@ -7322,11 +7779,14 @@ def test_versioning_obj_create_read_remove():
     _do_test_create_remove_versions(client, bucket_name, key, num_versions, 4, -1)
     _do_test_create_remove_versions(client, bucket_name, key, num_versions, 3, 3)
 
+
+@pytest.mark.versioning
 def test_versioning_obj_create_read_remove_head():
     bucket_name = get_new_bucket()
 
     client = get_client()
-    client.put_bucket_versioning(Bucket=bucket_name, VersioningConfiguration={'MFADelete': 'Disabled', 'Status': 'Enabled'})
+    client.put_bucket_versioning(Bucket=bucket_name,
+                                 VersioningConfiguration={'MFADelete': 'Disabled', 'Status': 'Enabled'})
     key = 'testobj'
     num_versions = 5
 
@@ -7335,7 +7795,7 @@ def test_versioning_obj_create_read_remove_head():
     # removes old head object, checks new one
     removed_version_id = version_ids.pop()
     contents.pop()
-    num_versions = num_versions-1
+    num_versions = num_versions - 1
 
     response = client.delete_object(Bucket=bucket_name, Key=key, VersionId=removed_version_id)
     response = client.get_object(Bucket=bucket_name, Key=key)
@@ -7356,6 +7816,10 @@ def test_versioning_obj_create_read_remove_head():
 
     clean_up_bucket(client, bucket_name, key, version_ids)
 
+
+@pytest.mark.versioning
+# # @pytest.mark.skip(reason="null version is not respected and instead deleting null object we are creating delete marke")
+@allure.description("null version is not respected and instead deleting null object we are creating delete marke")
 def test_versioning_obj_plain_null_version_removal():
     bucket_name = get_new_bucket()
     check_versioning(bucket_name, None)
@@ -7376,6 +7840,10 @@ def test_versioning_obj_plain_null_version_removal():
     response = client.list_object_versions(Bucket=bucket_name)
     assert not 'Versions' in response
 
+
+@pytest.mark.versioning
+# # @pytest.mark.skip(reason="null version is not respected and instead deleting null object we are creating delete marke")
+@allure.description("null version is not respected and instead deleting null object we are creating delete marke")
 def test_versioning_obj_plain_null_version_overwrite():
     bucket_name = get_new_bucket()
     check_versioning(bucket_name, None)
@@ -7409,6 +7877,8 @@ def test_versioning_obj_plain_null_version_overwrite():
     response = client.list_object_versions(Bucket=bucket_name)
     assert not 'Versions' in response
 
+
+@pytest.mark.versioning
 def test_versioning_obj_plain_null_version_overwrite_suspended():
     bucket_name = get_new_bucket()
     check_versioning(bucket_name, None)
@@ -7441,6 +7911,7 @@ def test_versioning_obj_plain_null_version_overwrite_suspended():
     response = client.list_object_versions(Bucket=bucket_name)
     assert not 'Versions' in response
 
+
 def delete_suspended_versioning_obj(client, bucket_name, key, version_ids, contents):
     client.delete_object(Bucket=bucket_name, Key=key)
 
@@ -7454,6 +7925,7 @@ def delete_suspended_versioning_obj(client, bucket_name, key, version_ids, conte
         i += 1
 
     return (version_ids, contents)
+
 
 def overwrite_suspended_versioning_obj(client, bucket_name, key, version_ids, contents, content):
     client.put_object(Bucket=bucket_name, Key=key, Body=content)
@@ -7474,6 +7946,72 @@ def overwrite_suspended_versioning_obj(client, bucket_name, key, version_ids, co
     return (version_ids, contents)
 
 
+@pytest.mark.versioning
+# # @pytest.mark.skip(reason="objects create in versioned bucket are incorrectly handled while delete when bucket versioning was suspended")
+@allure.description("objects create in versioned bucket are incorrectly handled while delete when bucket versioning was suspended")
+def test_versioning_obj_suspend_versions_simple():
+    bucket = get_new_bucket()
+    check_versioning(bucket, None)
+
+    check_configure_versioning_retry(bucket, True, "Enabled")
+
+    num_versions = 1
+    objname = 'testobj'
+
+    (k, c) = create_multiple_versions(bucket, objname, num_versions)
+
+    check_configure_versioning_retry(bucket, False, "Suspended")
+
+    delete_suspended_versioning_obj(bucket, objname, k, c)
+
+    check_configure_versioning_retry(bucket, True, "Enabled")
+
+    (k, c) = create_multiple_versions(bucket, objname, 1, k, c)
+
+    for i in range(len(k)):
+        print('JJJ: ', k[i].version_id, c[i])
+
+    _do_remove_versions(bucket, objname, 0, 0, 0.5, k, c)
+    _do_remove_versions(bucket, objname, 0, 0, 0, k, c)
+
+    assert len(k) == 0
+    assert len(k) == len(c)
+
+
+def _do_remove_versions(bucket, objname, remove_start_idx, idx_inc, head_rm_ratio, k, c):
+    idx = remove_start_idx
+
+    r = 0
+
+    total = len(k)
+
+    for j in range(total):
+        r += head_rm_ratio
+        if r >= 1:
+            r %= 1
+            remove_obj_head(bucket, objname, k, c)
+        else:
+            remove_obj_version(bucket, k, c, idx)
+            idx += idx_inc
+
+    check_obj_versions(bucket, objname, k, c)
+
+
+def remove_obj_head(bucket, objname, k, c):
+    print('removing obj=', objname)
+    key = bucket.delete_key(objname)
+
+    k.append(key)
+    c.append(None)
+
+    assert key.delete_marker == True
+
+    check_obj_versions(bucket, objname, k, c)
+
+
+@pytest.mark.versioning
+# # @pytest.mark.skip(reason="objects create in versioned bucket are incorrectly handled while delete when bucket versioning was suspended")
+@allure.description("objects create in versioned bucket are incorrectly handled while delete when bucket versioning was suspended")
 def test_versioning_obj_suspend_versions():
     bucket_name = get_new_bucket()
     client = get_client()
@@ -7506,6 +8044,8 @@ def test_versioning_obj_suspend_versions():
     assert len(version_ids) == 0
     assert len(version_ids) == len(contents)
 
+
+@pytest.mark.versioning
 def test_versioning_obj_create_versions_remove_all():
     bucket_name = get_new_bucket()
     client = get_client()
@@ -7522,6 +8062,8 @@ def test_versioning_obj_create_versions_remove_all():
     assert len(version_ids) == 0
     assert len(version_ids) == len(contents)
 
+
+@pytest.mark.versioning
 def test_versioning_obj_create_versions_remove_special_names():
     bucket_name = get_new_bucket()
     client = get_client()
@@ -7539,6 +8081,8 @@ def test_versioning_obj_create_versions_remove_special_names():
         assert len(version_ids) == 0
         assert len(version_ids) == len(contents)
 
+
+@pytest.mark.versioning
 @pytest.mark.fails_on_dbstore
 def test_versioning_obj_create_overwrite_multipart():
     bucket_name = get_new_bucket()
@@ -7552,7 +8096,7 @@ def test_versioning_obj_create_overwrite_multipart():
     version_ids = []
 
     for i in range(num_versions):
-        ret =  _do_test_multipart_upload_contents(bucket_name, key, 3)
+        ret = _do_test_multipart_upload_contents(bucket_name, key, 3)
         contents.append(ret)
 
     response = client.list_object_versions(Bucket=bucket_name)
@@ -7568,6 +8112,10 @@ def test_versioning_obj_create_overwrite_multipart():
     assert len(version_ids) == 0
     assert len(version_ids) == len(contents)
 
+
+@pytest.mark.versioning
+# # @pytest.mark.skip(reason="we need to start using VersionCursor on satellite side")
+@allure.description("we need to start using VersionCursor on satellite side")
 def test_versioning_obj_list_marker():
     bucket_name = get_new_bucket()
     client = get_client()
@@ -7623,6 +8171,10 @@ def test_versioning_obj_list_marker():
         check_obj_content(client, bucket_name, key, version['VersionId'], contents[j])
         i += 1
 
+
+@pytest.mark.versioning
+# # @pytest.mark.skip(reason="CopyObject doesn't support versioning yet")
+@allure.description("CopyObject doesn't support versioning yet")
 @pytest.mark.fails_on_dbstore
 def test_versioning_copy_obj_version():
     bucket_name = get_new_bucket()
@@ -7661,6 +8213,8 @@ def test_versioning_copy_obj_version():
     body = _get_body(response)
     assert body == contents[-1]
 
+
+@pytest.mark.versioning
 def test_versioning_multi_object_delete():
     bucket_name = get_new_bucket()
     client = get_client()
@@ -7686,6 +8240,8 @@ def test_versioning_multi_object_delete():
     response = client.list_object_versions(Bucket=bucket_name)
     assert not 'Versions' in response
 
+
+@pytest.mark.versioning
 def test_versioning_multi_object_delete_with_marker():
     bucket_name = get_new_bucket()
     client = get_client()
@@ -7718,9 +8274,12 @@ def test_versioning_multi_object_delete_with_marker():
     assert not 'Versions' in response
     assert not 'DeleteMarkers' in response
 
+
+@pytest.mark.versioning
 @pytest.mark.fails_on_dbstore
 def test_versioning_multi_object_delete_with_marker_create():
     bucket_name = get_new_bucket()
+    print(bucket_name)
     client = get_client()
 
     check_configure_versioning_retry(bucket_name, "Enabled", "Enabled")
@@ -7729,7 +8288,9 @@ def test_versioning_multi_object_delete_with_marker_create():
 
     # use delete_objects() to create a delete marker
     response = client.delete_objects(Bucket=bucket_name, Delete={'Objects': [{'Key': key}]})
+    print(response)
     assert len(response['Deleted']) == 1
+    print(response['Deleted'])
     assert response['Deleted'][0]['DeleteMarker']
     delete_marker_version_id = response['Deleted'][0]['DeleteMarkerVersionId']
 
@@ -7740,6 +8301,10 @@ def test_versioning_multi_object_delete_with_marker_create():
     assert delete_marker_version_id == delete_markers[0]['VersionId']
     assert key == delete_markers[0]['Key']
 
+
+@pytest.mark.versioning
+# @pytest.mark.skip(reason="ACL is not supported")
+@allure.description("ACL is not supported")
 def test_versioned_object_acl():
     bucket_name = get_new_bucket()
     client = get_client()
@@ -7763,19 +8328,19 @@ def test_versioned_object_acl():
 
     grants = response['Grants']
     default_policy = [
-            dict(
-                Permission='FULL_CONTROL',
-                ID=user_id,
-                DisplayName=display_name,
-                URI=None,
-                EmailAddress=None,
-                Type='CanonicalUser',
-                ),
-            ]
+        dict(
+            Permission='FULL_CONTROL',
+            ID=user_id,
+            DisplayName=display_name,
+            URI=None,
+            EmailAddress=None,
+            Type='CanonicalUser',
+        ),
+    ]
 
     check_grants(grants, default_policy)
 
-    client.put_object_acl(ACL='public-read',Bucket=bucket_name, Key=key, VersionId=version_id)
+    client.put_object_acl(ACL='public-read', Bucket=bucket_name, Key=key, VersionId=version_id)
 
     response = client.get_object_acl(Bucket=bucket_name, Key=key, VersionId=version_id)
     grants = response['Grants']
@@ -7789,7 +8354,7 @@ def test_versioned_object_acl():
                 URI='http://acs.amazonaws.com/groups/global/AllUsers',
                 EmailAddress=None,
                 Type='Group',
-                ),
+            ),
             dict(
                 Permission='FULL_CONTROL',
                 ID=user_id,
@@ -7797,9 +8362,9 @@ def test_versioned_object_acl():
                 URI=None,
                 EmailAddress=None,
                 Type='CanonicalUser',
-                ),
-            ],
-        )
+            ),
+        ],
+    )
 
     client.put_object(Bucket=bucket_name, Key=key)
 
@@ -7807,7 +8372,11 @@ def test_versioned_object_acl():
     grants = response['Grants']
     check_grants(grants, default_policy)
 
+
+@pytest.mark.versioning
+# @pytest.mark.skip(reason="ACL is not supported")
 @pytest.mark.fails_on_dbstore
+@allure.description("ACL is not supported")
 def test_versioned_object_acl_no_version_specified():
     bucket_name = get_new_bucket()
     client = get_client()
@@ -7832,19 +8401,19 @@ def test_versioned_object_acl_no_version_specified():
 
     grants = response['Grants']
     default_policy = [
-            dict(
-                Permission='FULL_CONTROL',
-                ID=user_id,
-                DisplayName=display_name,
-                URI=None,
-                EmailAddress=None,
-                Type='CanonicalUser',
-                ),
-            ]
+        dict(
+            Permission='FULL_CONTROL',
+            ID=user_id,
+            DisplayName=display_name,
+            URI=None,
+            EmailAddress=None,
+            Type='CanonicalUser',
+        ),
+    ]
 
     check_grants(grants, default_policy)
 
-    client.put_object_acl(ACL='public-read',Bucket=bucket_name, Key=key)
+    client.put_object_acl(ACL='public-read', Bucket=bucket_name, Key=key)
 
     response = client.get_object_acl(Bucket=bucket_name, Key=key, VersionId=version_id)
     grants = response['Grants']
@@ -7858,7 +8427,7 @@ def test_versioned_object_acl_no_version_specified():
                 URI='http://acs.amazonaws.com/groups/global/AllUsers',
                 EmailAddress=None,
                 Type='Group',
-                ),
+            ),
             dict(
                 Permission='FULL_CONTROL',
                 ID=user_id,
@@ -7866,36 +8435,45 @@ def test_versioned_object_acl_no_version_specified():
                 URI=None,
                 EmailAddress=None,
                 Type='CanonicalUser',
-                ),
-            ],
-        )
+            ),
+        ],
+    )
+
 
 def _do_create_object(client, bucket_name, key, i):
     body = 'data {i}'.format(i=i)
     client.put_object(Bucket=bucket_name, Key=key, Body=body)
 
+
 def _do_remove_ver(client, bucket_name, key, version_id):
     client.delete_object(Bucket=bucket_name, Key=key, VersionId=version_id)
+
 
 def _do_create_versioned_obj_concurrent(client, bucket_name, key, num):
     t = []
     for i in range(num):
-        thr = threading.Thread(target = _do_create_object, args=(client, bucket_name, key, i))
+        thr = threading.Thread(target=_do_create_object, args=(client, bucket_name, key, i))
         thr.start()
         t.append(thr)
     return t
+
 
 def _do_clear_versioned_bucket_concurrent(client, bucket_name):
     t = []
     response = client.list_object_versions(Bucket=bucket_name)
+    versions = response['Versions']
+    print("sdfdsdssd----------------------mknnbskjbkjbfkjbfjk")
+    print(len(versions))
     for version in response.get('Versions', []):
-        thr = threading.Thread(target = _do_remove_ver, args=(client, bucket_name, version['Key'], version['VersionId']))
+        thr = threading.Thread(target=_do_remove_ver, args=(client, bucket_name, version['Key'], version['VersionId']))
         thr.start()
         t.append(thr)
     return t
 
+
 # TODO: remove fails_on_rgw when https://tracker.ceph.com/issues/39142 is resolved
 @pytest.mark.fails_on_rgw
+@pytest.mark.versioning
 def test_versioned_concurrent_object_create_concurrent_remove():
     bucket_name = get_new_bucket()
     client = get_client()
@@ -7911,15 +8489,19 @@ def test_versioned_concurrent_object_create_concurrent_remove():
 
         response = client.list_object_versions(Bucket=bucket_name)
         versions = response['Versions']
+        print(len(versions))
 
         assert len(versions) == num_versions
 
         t = _do_clear_versioned_bucket_concurrent(client, bucket_name)
         _do_wait_completion(t)
 
+
         response = client.list_object_versions(Bucket=bucket_name)
         assert not 'Versions' in response
 
+
+@pytest.mark.versioning
 def test_versioned_concurrent_object_create_and_remove():
     bucket_name = get_new_bucket()
     client = get_client()
@@ -7932,7 +8514,6 @@ def test_versioned_concurrent_object_create_and_remove():
     all_threads = []
 
     for i in range(3):
-
         t = _do_create_versioned_obj_concurrent(client, bucket_name, key, num_versions)
         all_threads.append(t)
 
@@ -7948,42 +8529,45 @@ def test_versioned_concurrent_object_create_and_remove():
     response = client.list_object_versions(Bucket=bucket_name)
     assert not 'Versions' in response
 
+
 @pytest.mark.lifecycle
 def test_lifecycle_set():
     bucket_name = get_new_bucket()
     client = get_client()
-    rules=[{'ID': 'rule1', 'Expiration': {'Days': 1}, 'Prefix': 'test1/', 'Status':'Enabled'},
-           {'ID': 'rule2', 'Expiration': {'Days': 2}, 'Prefix': 'test2/', 'Status':'Disabled'}]
+    rules = [{'ID': 'rule1', 'Expiration': {'Days': 1}, 'Prefix': 'test1/', 'Status': 'Enabled'},
+             {'ID': 'rule2', 'Expiration': {'Days': 2}, 'Prefix': 'test2/', 'Status': 'Disabled'}]
     lifecycle = {'Rules': rules}
     response = client.put_bucket_lifecycle_configuration(Bucket=bucket_name, LifecycleConfiguration=lifecycle)
     assert response['ResponseMetadata']['HTTPStatusCode'] == 200
+
 
 @pytest.mark.lifecycle
 def test_lifecycle_get():
     bucket_name = get_new_bucket()
     client = get_client()
-    rules=[{'ID': 'test1/', 'Expiration': {'Days': 31}, 'Prefix': 'test1/', 'Status':'Enabled'},
-           {'ID': 'test2/', 'Expiration': {'Days': 120}, 'Prefix': 'test2/', 'Status':'Enabled'}]
+    rules = [{'ID': 'test1/', 'Expiration': {'Days': 31}, 'Prefix': 'test1/', 'Status': 'Enabled'},
+             {'ID': 'test2/', 'Expiration': {'Days': 120}, 'Prefix': 'test2/', 'Status': 'Enabled'}]
     lifecycle = {'Rules': rules}
     client.put_bucket_lifecycle_configuration(Bucket=bucket_name, LifecycleConfiguration=lifecycle)
     response = client.get_bucket_lifecycle_configuration(Bucket=bucket_name)
     assert response['Rules'] == rules
+
 
 @pytest.mark.lifecycle
 def test_lifecycle_get_no_id():
     bucket_name = get_new_bucket()
     client = get_client()
 
-    rules=[{'Expiration': {'Days': 31}, 'Prefix': 'test1/', 'Status':'Enabled'},
-           {'Expiration': {'Days': 120}, 'Prefix': 'test2/', 'Status':'Enabled'}]
+    rules = [{'Expiration': {'Days': 31}, 'Prefix': 'test1/', 'Status': 'Enabled'},
+             {'Expiration': {'Days': 120}, 'Prefix': 'test2/', 'Status': 'Enabled'}]
     lifecycle = {'Rules': rules}
     client.put_bucket_lifecycle_configuration(Bucket=bucket_name, LifecycleConfiguration=lifecycle)
     response = client.get_bucket_lifecycle_configuration(Bucket=bucket_name)
     current_lc = response['Rules']
 
-    Rule = namedtuple('Rule',['prefix','status','days'])
-    rules = {'rule1' : Rule('test1/','Enabled',31),
-             'rule2' : Rule('test2/','Enabled',120)}
+    Rule = namedtuple('Rule', ['prefix', 'status', 'days'])
+    rules = {'rule1': Rule('test1/', 'Enabled', 31),
+             'rule2': Rule('test2/', 'Enabled', 120)}
 
     for lc_rule in current_lc:
         if lc_rule['Prefix'] == rules['rule1'].prefix:
@@ -7999,6 +8583,7 @@ def test_lifecycle_get_no_id():
             print("rules not right")
             assert False
 
+
 # The test harness for lifecycle is configured to treat days as 10 second intervals.
 @pytest.mark.lifecycle
 @pytest.mark.lifecycle_expiration
@@ -8008,8 +8593,8 @@ def test_lifecycle_expiration():
     bucket_name = _create_objects(keys=['expire1/foo', 'expire1/bar', 'keep2/foo',
                                         'keep2/bar', 'expire3/foo', 'expire3/bar'])
     client = get_client()
-    rules=[{'ID': 'rule1', 'Expiration': {'Days': 1}, 'Prefix': 'expire1/', 'Status':'Enabled'},
-           {'ID': 'rule2', 'Expiration': {'Days': 5}, 'Prefix': 'expire3/', 'Status':'Enabled'}]
+    rules = [{'ID': 'rule1', 'Expiration': {'Days': 1}, 'Prefix': 'expire1/', 'Status': 'Enabled'},
+             {'ID': 'rule2', 'Expiration': {'Days': 5}, 'Prefix': 'expire3/', 'Status': 'Enabled'}]
     lifecycle = {'Rules': rules}
     client.put_bucket_lifecycle_configuration(Bucket=bucket_name, LifecycleConfiguration=lifecycle)
     response = client.list_objects(Bucket=bucket_name)
@@ -8017,7 +8602,7 @@ def test_lifecycle_expiration():
 
     lc_interval = get_lc_debug_interval()
 
-    time.sleep(3*lc_interval)
+    time.sleep(3 * lc_interval)
     response = client.list_objects(Bucket=bucket_name)
     expire1_objects = response['Contents']
 
@@ -8025,7 +8610,7 @@ def test_lifecycle_expiration():
     response = client.list_objects(Bucket=bucket_name)
     keep2_objects = response['Contents']
 
-    time.sleep(3*lc_interval)
+    time.sleep(3 * lc_interval)
     response = client.list_objects(Bucket=bucket_name)
     expire3_objects = response['Contents']
 
@@ -8033,6 +8618,7 @@ def test_lifecycle_expiration():
     assert len(expire1_objects) == 4
     assert len(keep2_objects) == 4
     assert len(expire3_objects) == 2
+
 
 @pytest.mark.lifecycle
 @pytest.mark.lifecycle_expiration
@@ -8043,8 +8629,8 @@ def test_lifecyclev2_expiration():
     bucket_name = _create_objects(keys=['expire1/foo', 'expire1/bar', 'keep2/foo',
                                         'keep2/bar', 'expire3/foo', 'expire3/bar'])
     client = get_client()
-    rules=[{'ID': 'rule1', 'Expiration': {'Days': 1}, 'Prefix': 'expire1/', 'Status':'Enabled'},
-           {'ID': 'rule2', 'Expiration': {'Days': 5}, 'Prefix': 'expire3/', 'Status':'Enabled'}]
+    rules = [{'ID': 'rule1', 'Expiration': {'Days': 1}, 'Prefix': 'expire1/', 'Status': 'Enabled'},
+             {'ID': 'rule2', 'Expiration': {'Days': 5}, 'Prefix': 'expire3/', 'Status': 'Enabled'}]
     lifecycle = {'Rules': rules}
     client.put_bucket_lifecycle_configuration(Bucket=bucket_name, LifecycleConfiguration=lifecycle)
     response = client.list_objects_v2(Bucket=bucket_name)
@@ -8052,7 +8638,7 @@ def test_lifecyclev2_expiration():
 
     lc_interval = get_lc_debug_interval()
 
-    time.sleep(3*lc_interval)
+    time.sleep(3 * lc_interval)
     response = client.list_objects_v2(Bucket=bucket_name)
     expire1_objects = response['Contents']
 
@@ -8060,7 +8646,7 @@ def test_lifecyclev2_expiration():
     response = client.list_objects_v2(Bucket=bucket_name)
     keep2_objects = response['Contents']
 
-    time.sleep(3*lc_interval)
+    time.sleep(3 * lc_interval)
     response = client.list_objects_v2(Bucket=bucket_name)
     expire3_objects = response['Contents']
 
@@ -8069,6 +8655,7 @@ def test_lifecyclev2_expiration():
     assert len(keep2_objects) == 4
     assert len(expire3_objects) == 2
 
+@pytest.mark.versioning
 @pytest.mark.lifecycle
 @pytest.mark.lifecycle_expiration
 @pytest.mark.fails_on_aws
@@ -8079,19 +8666,20 @@ def test_lifecycle_expiration_versioning_enabled():
     create_multiple_versions(client, bucket_name, "test1/a", 1)
     client.delete_object(Bucket=bucket_name, Key="test1/a")
 
-    rules=[{'ID': 'rule1', 'Expiration': {'Days': 1}, 'Prefix': 'test1/', 'Status':'Enabled'}]
+    rules = [{'ID': 'rule1', 'Expiration': {'Days': 1}, 'Prefix': 'test1/', 'Status': 'Enabled'}]
     lifecycle = {'Rules': rules}
     client.put_bucket_lifecycle_configuration(Bucket=bucket_name, LifecycleConfiguration=lifecycle)
 
     lc_interval = get_lc_debug_interval()
 
-    time.sleep(3*lc_interval)
+    time.sleep(3 * lc_interval)
 
-    response  = client.list_object_versions(Bucket=bucket_name)
+    response = client.list_object_versions(Bucket=bucket_name)
     versions = response['Versions']
     delete_markers = response['DeleteMarkers']
     assert len(versions) == 1
     assert len(delete_markers) == 1
+
 
 @pytest.mark.lifecycle
 @pytest.mark.lifecycle_expiration
@@ -8102,7 +8690,7 @@ def test_lifecycle_expiration_tags1():
 
     tom_key = 'days1/tom'
     tom_tagset = {'TagSet':
-                  [{'Key': 'tom', 'Value': 'sawyer'}]}
+                      [{'Key': 'tom', 'Value': 'sawyer'}]}
 
     client.put_object(Bucket=bucket_name, Key=tom_key, Body='tom_body')
 
@@ -8135,7 +8723,7 @@ def test_lifecycle_expiration_tags1():
 
     lc_interval = get_lc_debug_interval()
 
-    time.sleep(3*lc_interval)
+    time.sleep(3 * lc_interval)
 
     try:
         expire_objects = response['Contents']
@@ -8144,11 +8732,12 @@ def test_lifecycle_expiration_tags1():
 
     assert len(expire_objects) == 0
 
+
 # factor out common setup code
 def setup_lifecycle_tags2(client, bucket_name):
     tom_key = 'days1/tom'
     tom_tagset = {'TagSet':
-                  [{'Key': 'tom', 'Value': 'sawyer'}]}
+                      [{'Key': 'tom', 'Value': 'sawyer'}]}
 
     client.put_object(Bucket=bucket_name, Key=tom_key, Body='tom_body')
 
@@ -8159,8 +8748,8 @@ def setup_lifecycle_tags2(client, bucket_name):
     huck_key = 'days1/huck'
     huck_tagset = {
         'TagSet':
-        [{'Key': 'tom', 'Value': 'sawyer'},
-         {'Key': 'huck', 'Value': 'finn'}]}
+            [{'Key': 'tom', 'Value': 'sawyer'},
+             {'Key': 'huck', 'Value': 'finn'}]}
 
     client.put_object(Bucket=bucket_name, Key=huck_key, Body='huck_body')
 
@@ -8201,6 +8790,7 @@ def setup_lifecycle_tags2(client, bucket_name):
     assert response['ResponseMetadata']['HTTPStatusCode'] == 200
     return response
 
+
 @pytest.mark.lifecycle
 @pytest.mark.lifecycle_expiration
 @pytest.mark.fails_on_aws
@@ -8213,12 +8803,13 @@ def test_lifecycle_expiration_tags2():
 
     lc_interval = get_lc_debug_interval()
 
-    time.sleep(3*lc_interval)
+    time.sleep(3 * lc_interval)
     response = client.list_objects(Bucket=bucket_name)
     expire1_objects = response['Contents']
 
     assert len(expire1_objects) == 1
 
+@pytest.mark.versioning
 @pytest.mark.lifecycle
 @pytest.mark.lifecycle_expiration
 @pytest.mark.fails_on_aws
@@ -8234,19 +8825,19 @@ def test_lifecycle_expiration_versioned_tags2():
 
     lc_interval = get_lc_debug_interval()
 
-    time.sleep(3*lc_interval)
+    time.sleep(3 * lc_interval)
     response = client.list_objects(Bucket=bucket_name)
     expire1_objects = response['Contents']
 
     assert len(expire1_objects) == 1
 
+
 # setup for scenario based on vidushi mishra's in rhbz#1877737
 def setup_lifecycle_noncur_tags(client, bucket_name, days):
-
     # first create and tag the objects (10 versions of 1)
     key = "myobject_"
     tagset = {'TagSet':
-              [{'Key': 'vidushi', 'Value': 'mishra'}]}
+                  [{'Key': 'vidushi', 'Value': 'mishra'}]}
 
     for ix in range(10):
         body = "%s v%d" % (key, ix)
@@ -8280,14 +8871,16 @@ def setup_lifecycle_noncur_tags(client, bucket_name, days):
     assert response['ResponseMetadata']['HTTPStatusCode'] == 200
     return response
 
+
 def verify_lifecycle_expiration_noncur_tags(client, bucket_name, secs):
     time.sleep(secs)
     try:
-        response  = client.list_object_versions(Bucket=bucket_name)
+        response = client.list_object_versions(Bucket=bucket_name)
         objs_list = response['Versions']
     except:
         objs_list = []
     return len(objs_list)
+
 
 @pytest.mark.lifecycle
 @pytest.mark.lifecycle_expiration
@@ -8306,55 +8899,61 @@ def test_lifecycle_expiration_noncur_tags1():
     lc_interval = get_lc_debug_interval()
 
     num_objs = verify_lifecycle_expiration_noncur_tags(
-        client, bucket_name, 2*lc_interval)
+        client, bucket_name, 2 * lc_interval)
 
     # at T+20, 10 objects should exist
     assert num_objs == 10
 
     num_objs = verify_lifecycle_expiration_noncur_tags(
-        client, bucket_name, 5*lc_interval)
+        client, bucket_name, 5 * lc_interval)
 
     # at T+60, only the current object version should exist
     assert num_objs == 1
+
 
 @pytest.mark.lifecycle
 def test_lifecycle_id_too_long():
     bucket_name = get_new_bucket()
     client = get_client()
-    rules=[{'ID': 256*'a', 'Expiration': {'Days': 2}, 'Prefix': 'test1/', 'Status':'Enabled'}]
+    rules = [{'ID': 256 * 'a', 'Expiration': {'Days': 2}, 'Prefix': 'test1/', 'Status': 'Enabled'}]
     lifecycle = {'Rules': rules}
 
-    e = assert_raises(ClientError, client.put_bucket_lifecycle_configuration, Bucket=bucket_name, LifecycleConfiguration=lifecycle)
+    e = assert_raises(ClientError, client.put_bucket_lifecycle_configuration, Bucket=bucket_name,
+                      LifecycleConfiguration=lifecycle)
     status, error_code = _get_status_and_error_code(e.response)
     assert status == 400
     assert error_code == 'InvalidArgument'
+
 
 @pytest.mark.lifecycle
 def test_lifecycle_same_id():
     bucket_name = get_new_bucket()
     client = get_client()
-    rules=[{'ID': 'rule1', 'Expiration': {'Days': 1}, 'Prefix': 'test1/', 'Status':'Enabled'},
-           {'ID': 'rule1', 'Expiration': {'Days': 2}, 'Prefix': 'test2/', 'Status':'Enabled'}]
+    rules = [{'ID': 'rule1', 'Expiration': {'Days': 1}, 'Prefix': 'test1/', 'Status': 'Enabled'},
+             {'ID': 'rule1', 'Expiration': {'Days': 2}, 'Prefix': 'test2/', 'Status': 'Enabled'}]
     lifecycle = {'Rules': rules}
 
-    e = assert_raises(ClientError, client.put_bucket_lifecycle_configuration, Bucket=bucket_name, LifecycleConfiguration=lifecycle)
+    e = assert_raises(ClientError, client.put_bucket_lifecycle_configuration, Bucket=bucket_name,
+                      LifecycleConfiguration=lifecycle)
     status, error_code = _get_status_and_error_code(e.response)
     assert status == 400
     assert error_code == 'InvalidArgument'
+
 
 @pytest.mark.lifecycle
 def test_lifecycle_invalid_status():
     bucket_name = get_new_bucket()
     client = get_client()
-    rules=[{'ID': 'rule1', 'Expiration': {'Days': 2}, 'Prefix': 'test1/', 'Status':'enabled'}]
+    rules = [{'ID': 'rule1', 'Expiration': {'Days': 2}, 'Prefix': 'test1/', 'Status': 'enabled'}]
     lifecycle = {'Rules': rules}
 
-    e = assert_raises(ClientError, client.put_bucket_lifecycle_configuration, Bucket=bucket_name, LifecycleConfiguration=lifecycle)
+    e = assert_raises(ClientError, client.put_bucket_lifecycle_configuration, Bucket=bucket_name,
+                      LifecycleConfiguration=lifecycle)
     status, error_code = _get_status_and_error_code(e.response)
     assert status == 400
     assert error_code == 'MalformedXML'
 
-    rules=[{'ID': 'rule1', 'Expiration': {'Days': 2}, 'Prefix': 'test1/', 'Status':'disabled'}]
+    rules = [{'ID': 'rule1', 'Expiration': {'Days': 2}, 'Prefix': 'test1/', 'Status': 'disabled'}]
     lifecycle = {'Rules': rules}
 
     e = assert_raises(ClientError, client.put_bucket_lifecycle, Bucket=bucket_name, LifecycleConfiguration=lifecycle)
@@ -8362,34 +8961,39 @@ def test_lifecycle_invalid_status():
     assert status == 400
     assert error_code == 'MalformedXML'
 
-    rules=[{'ID': 'rule1', 'Expiration': {'Days': 2}, 'Prefix': 'test1/', 'Status':'invalid'}]
+    rules = [{'ID': 'rule1', 'Expiration': {'Days': 2}, 'Prefix': 'test1/', 'Status': 'invalid'}]
     lifecycle = {'Rules': rules}
 
-    e = assert_raises(ClientError, client.put_bucket_lifecycle_configuration, Bucket=bucket_name, LifecycleConfiguration=lifecycle)
+    e = assert_raises(ClientError, client.put_bucket_lifecycle_configuration, Bucket=bucket_name,
+                      LifecycleConfiguration=lifecycle)
     status, error_code = _get_status_and_error_code(e.response)
     assert status == 400
     assert error_code == 'MalformedXML'
+
 
 @pytest.mark.lifecycle
 def test_lifecycle_set_date():
     bucket_name = get_new_bucket()
     client = get_client()
-    rules=[{'ID': 'rule1', 'Expiration': {'Date': '2017-09-27'}, 'Prefix': 'test1/', 'Status':'Enabled'}]
+    rules = [{'ID': 'rule1', 'Expiration': {'Date': '2017-09-27'}, 'Prefix': 'test1/', 'Status': 'Enabled'}]
     lifecycle = {'Rules': rules}
 
     response = client.put_bucket_lifecycle_configuration(Bucket=bucket_name, LifecycleConfiguration=lifecycle)
     assert response['ResponseMetadata']['HTTPStatusCode'] == 200
 
+
 @pytest.mark.lifecycle
 def test_lifecycle_set_invalid_date():
     bucket_name = get_new_bucket()
     client = get_client()
-    rules=[{'ID': 'rule1', 'Expiration': {'Date': '20200101'}, 'Prefix': 'test1/', 'Status':'Enabled'}]
+    rules = [{'ID': 'rule1', 'Expiration': {'Date': '20200101'}, 'Prefix': 'test1/', 'Status': 'Enabled'}]
     lifecycle = {'Rules': rules}
 
-    e = assert_raises(ClientError, client.put_bucket_lifecycle_configuration, Bucket=bucket_name, LifecycleConfiguration=lifecycle)
+    e = assert_raises(ClientError, client.put_bucket_lifecycle_configuration, Bucket=bucket_name,
+                      LifecycleConfiguration=lifecycle)
     status, error_code = _get_status_and_error_code(e.response)
     assert status == 400
+
 
 @pytest.mark.lifecycle
 @pytest.mark.lifecycle_expiration
@@ -8398,8 +9002,8 @@ def test_lifecycle_set_invalid_date():
 def test_lifecycle_expiration_date():
     bucket_name = _create_objects(keys=['past/foo', 'future/bar'])
     client = get_client()
-    rules=[{'ID': 'rule1', 'Expiration': {'Date': '2015-01-01'}, 'Prefix': 'past/', 'Status':'Enabled'},
-           {'ID': 'rule2', 'Expiration': {'Date': '2030-01-01'}, 'Prefix': 'future/', 'Status':'Enabled'}]
+    rules = [{'ID': 'rule1', 'Expiration': {'Date': '2015-01-01'}, 'Prefix': 'past/', 'Status': 'Enabled'},
+             {'ID': 'rule2', 'Expiration': {'Date': '2030-01-01'}, 'Prefix': 'future/', 'Status': 'Enabled'}]
     lifecycle = {'Rules': rules}
     client.put_bucket_lifecycle_configuration(Bucket=bucket_name, LifecycleConfiguration=lifecycle)
     response = client.list_objects(Bucket=bucket_name)
@@ -8408,12 +9012,13 @@ def test_lifecycle_expiration_date():
     lc_interval = get_lc_debug_interval()
 
     # Wait for first expiration (plus fudge to handle the timer window)
-    time.sleep(3*lc_interval)
+    time.sleep(3 * lc_interval)
     response = client.list_objects(Bucket=bucket_name)
     expire_objects = response['Contents']
 
     assert len(init_objects) == 2
     assert len(expire_objects) == 1
+
 
 @pytest.mark.lifecycle
 @pytest.mark.lifecycle_expiration
@@ -8421,7 +9026,7 @@ def test_lifecycle_expiration_days0():
     bucket_name = _create_objects(keys=['days0/foo', 'days0/bar'])
     client = get_client()
 
-    rules=[{'Expiration': {'Days': 0}, 'ID': 'rule1', 'Prefix': 'days0/', 'Status':'Enabled'}]
+    rules = [{'Expiration': {'Days': 0}, 'ID': 'rule1', 'Prefix': 'days0/', 'Status': 'Enabled'}]
     lifecycle = {'Rules': rules}
 
     # days: 0 is legal in a transition rule, but not legal in an
@@ -8436,10 +9041,10 @@ def test_lifecycle_expiration_days0():
 
 
 def setup_lifecycle_expiration(client, bucket_name, rule_id, delta_days,
-                                    rule_prefix):
-    rules=[{'ID': rule_id,
-            'Expiration': {'Days': delta_days}, 'Prefix': rule_prefix,
-            'Status':'Enabled'}]
+                               rule_prefix):
+    rules = [{'ID': rule_id,
+              'Expiration': {'Days': delta_days}, 'Prefix': rule_prefix,
+              'Status': 'Enabled'}]
     lifecycle = {'Rules': rules}
     response = client.put_bucket_lifecycle_configuration(
         Bucket=bucket_name, LifecycleConfiguration=lifecycle)
@@ -8450,6 +9055,7 @@ def setup_lifecycle_expiration(client, bucket_name, rule_id, delta_days,
     response = client.put_object(Bucket=bucket_name, Key=key, Body=body)
     assert response['ResponseMetadata']['HTTPStatusCode'] == 200
     return response
+
 
 def check_lifecycle_expiration_header(response, start_time, rule_id,
                                       delta_days):
@@ -8464,7 +9070,8 @@ def check_lifecycle_expiration_header(response, start_time, rule_id,
     days_to_expire = ((expiration.replace(tzinfo=None) - start_time).days == delta_days)
     rule_eq_id = (m.group(2) == rule_id)
 
-    return  days_to_expire and rule_eq_id
+    return days_to_expire and rule_eq_id
+
 
 @pytest.mark.lifecycle
 @pytest.mark.lifecycle_expiration
@@ -8476,6 +9083,7 @@ def test_lifecycle_expiration_header_put():
     response = setup_lifecycle_expiration(
         client, bucket_name, 'rule1', 1, 'days1/')
     assert check_lifecycle_expiration_header(response, now, 'rule1', 1)
+
 
 @pytest.mark.lifecycle
 @pytest.mark.lifecycle_expiration
@@ -8495,23 +9103,24 @@ def test_lifecycle_expiration_header_head():
     assert response['ResponseMetadata']['HTTPStatusCode'] == 200
     assert check_lifecycle_expiration_header(response, now, 'rule1', 1)
 
+
 @pytest.mark.lifecycle
 @pytest.mark.lifecycle_expiration
 @pytest.mark.fails_on_dbstore
 def test_lifecycle_expiration_header_tags_head():
     bucket_name = get_new_bucket()
     client = get_client()
-    lifecycle={
+    lifecycle = {
         "Rules": [
-        {
-            "Filter": {
-                "Tag": {"Key": "key1", "Value": "tag1"}
-            },
-            "Status": "Enabled",
-            "Expiration": {
-                "Days": 1
-            },
-            "ID": "rule1"
+            {
+                "Filter": {
+                    "Tag": {"Key": "key1", "Value": "tag1"}
+                },
+                "Status": "Enabled",
+                "Expiration": {
+                    "Days": 1
+                },
+                "ID": "rule1"
             },
         ]
     }
@@ -8519,10 +9128,10 @@ def test_lifecycle_expiration_header_tags_head():
         Bucket=bucket_name, LifecycleConfiguration=lifecycle)
     key1 = "obj_key1"
     body1 = "obj_key1_body"
-    tags1={'TagSet': [{'Key': 'key1', 'Value': 'tag1'},
-          {'Key': 'key5','Value': 'tag5'}]}
+    tags1 = {'TagSet': [{'Key': 'key1', 'Value': 'tag1'},
+                        {'Key': 'key5', 'Value': 'tag5'}]}
     response = client.put_object(Bucket=bucket_name, Key=key1, Body=body1)
-    response = client.put_object_tagging(Bucket=bucket_name, Key=key1,Tagging=tags1)
+    response = client.put_object_tagging(Bucket=bucket_name, Key=key1, Tagging=tags1)
 
     # stat the object, check header
     response = client.head_object(Bucket=bucket_name, Key=key1)
@@ -8530,17 +9139,17 @@ def test_lifecycle_expiration_header_tags_head():
     assert check_lifecycle_expiration_header(response, datetime.datetime.now(None), 'rule1', 1)
 
     # test that header is not returning when it should not
-    lifecycle={
+    lifecycle = {
         "Rules": [
-        {
-            "Filter": {
-                "Tag": {"Key": "key2", "Value": "tag1"}
-            },
-            "Status": "Enabled",
-            "Expiration": {
-                "Days": 1
-            },
-            "ID": "rule1"
+            {
+                "Filter": {
+                    "Tag": {"Key": "key2", "Value": "tag1"}
+                },
+                "Status": "Enabled",
+                "Expiration": {
+                    "Days": 1
+                },
+                "ID": "rule1"
             },
         ]
     }
@@ -8550,6 +9159,7 @@ def test_lifecycle_expiration_header_tags_head():
     response = client.head_object(Bucket=bucket_name, Key=key1)
     assert response['ResponseMetadata']['HTTPStatusCode'] == 200
     assert check_lifecycle_expiration_header(response, datetime.datetime.now(None), 'rule1', 1) == False
+
 
 @pytest.mark.lifecycle
 @pytest.mark.lifecycle_expiration
@@ -8558,28 +9168,28 @@ def test_lifecycle_expiration_header_and_tags_head():
     now = datetime.datetime.now(None)
     bucket_name = get_new_bucket()
     client = get_client()
-    lifecycle={
+    lifecycle = {
         "Rules": [
-        {
-            "Filter": {
-                "And": {
-                    "Tags": [
-                        {
-                            "Key": "key1",
-                            "Value": "tag1"
-                        },
-                        {
-                            "Key": "key5",
-                            "Value": "tag6"
-                        }
-                    ]
-                }
-            },
-            "Status": "Enabled",
-            "Expiration": {
-                "Days": 1
-            },
-            "ID": "rule1"
+            {
+                "Filter": {
+                    "And": {
+                        "Tags": [
+                            {
+                                "Key": "key1",
+                                "Value": "tag1"
+                            },
+                            {
+                                "Key": "key5",
+                                "Value": "tag6"
+                            }
+                        ]
+                    }
+                },
+                "Status": "Enabled",
+                "Expiration": {
+                    "Days": 1
+                },
+                "ID": "rule1"
             },
         ]
     }
@@ -8587,25 +9197,28 @@ def test_lifecycle_expiration_header_and_tags_head():
         Bucket=bucket_name, LifecycleConfiguration=lifecycle)
     key1 = "obj_key1"
     body1 = "obj_key1_body"
-    tags1={'TagSet': [{'Key': 'key1', 'Value': 'tag1'},
-          {'Key': 'key5','Value': 'tag5'}]}
+    tags1 = {'TagSet': [{'Key': 'key1', 'Value': 'tag1'},
+                        {'Key': 'key5', 'Value': 'tag5'}]}
     response = client.put_object(Bucket=bucket_name, Key=key1, Body=body1)
-    response = client.put_object_tagging(Bucket=bucket_name, Key=key1,Tagging=tags1)
+    response = client.put_object_tagging(Bucket=bucket_name, Key=key1, Tagging=tags1)
 
     # stat the object, check header
     response = client.head_object(Bucket=bucket_name, Key=key1)
     assert response['ResponseMetadata']['HTTPStatusCode'] == 200
     assert check_lifecycle_expiration_header(response, datetime.datetime.now(None), 'rule1', 1) == False
 
+
 @pytest.mark.lifecycle
 def test_lifecycle_set_noncurrent():
     bucket_name = _create_objects(keys=['past/foo', 'future/bar'])
     client = get_client()
-    rules=[{'ID': 'rule1', 'NoncurrentVersionExpiration': {'NoncurrentDays': 2}, 'Prefix': 'past/', 'Status':'Enabled'},
-           {'ID': 'rule2', 'NoncurrentVersionExpiration': {'NoncurrentDays': 3}, 'Prefix': 'future/', 'Status':'Enabled'}]
+    rules = [
+        {'ID': 'rule1', 'NoncurrentVersionExpiration': {'NoncurrentDays': 2}, 'Prefix': 'past/', 'Status': 'Enabled'},
+        {'ID': 'rule2', 'NoncurrentVersionExpiration': {'NoncurrentDays': 3}, 'Prefix': 'future/', 'Status': 'Enabled'}]
     lifecycle = {'Rules': rules}
     response = client.put_bucket_lifecycle_configuration(Bucket=bucket_name, LifecycleConfiguration=lifecycle)
     assert response['ResponseMetadata']['HTTPStatusCode'] == 200
+
 
 @pytest.mark.lifecycle
 @pytest.mark.lifecycle_expiration
@@ -8619,49 +9232,56 @@ def test_lifecycle_noncur_expiration():
     # not checking the object contents on the second run, because the function doesn't support multiple checks
     create_multiple_versions(client, bucket_name, "test2/abc", 3, check_versions=False)
 
-    response  = client.list_object_versions(Bucket=bucket_name)
+    response = client.list_object_versions(Bucket=bucket_name)
     init_versions = response['Versions']
 
-    rules=[{'ID': 'rule1', 'NoncurrentVersionExpiration': {'NoncurrentDays': 2}, 'Prefix': 'test1/', 'Status':'Enabled'}]
+    rules = [
+        {'ID': 'rule1', 'NoncurrentVersionExpiration': {'NoncurrentDays': 2}, 'Prefix': 'test1/', 'Status': 'Enabled'}]
     lifecycle = {'Rules': rules}
     client.put_bucket_lifecycle_configuration(Bucket=bucket_name, LifecycleConfiguration=lifecycle)
 
     lc_interval = get_lc_debug_interval()
 
     # Wait for first expiration (plus fudge to handle the timer window)
-    time.sleep(5*lc_interval)
+    time.sleep(5 * lc_interval)
 
-    response  = client.list_object_versions(Bucket=bucket_name)
+    response = client.list_object_versions(Bucket=bucket_name)
     expire_versions = response['Versions']
     assert len(init_versions) == 6
     assert len(expire_versions) == 4
+
 
 @pytest.mark.lifecycle
 def test_lifecycle_set_deletemarker():
     bucket_name = get_new_bucket()
     client = get_client()
-    rules=[{'ID': 'rule1', 'Expiration': {'ExpiredObjectDeleteMarker': True}, 'Prefix': 'test1/', 'Status':'Enabled'}]
+    rules = [
+        {'ID': 'rule1', 'Expiration': {'ExpiredObjectDeleteMarker': True}, 'Prefix': 'test1/', 'Status': 'Enabled'}]
     lifecycle = {'Rules': rules}
     response = client.put_bucket_lifecycle_configuration(Bucket=bucket_name, LifecycleConfiguration=lifecycle)
     assert response['ResponseMetadata']['HTTPStatusCode'] == 200
+
 
 @pytest.mark.lifecycle
 def test_lifecycle_set_filter():
     bucket_name = get_new_bucket()
     client = get_client()
-    rules=[{'ID': 'rule1', 'Expiration': {'ExpiredObjectDeleteMarker': True}, 'Filter': {'Prefix': 'foo'}, 'Status':'Enabled'}]
+    rules = [{'ID': 'rule1', 'Expiration': {'ExpiredObjectDeleteMarker': True}, 'Filter': {'Prefix': 'foo'},
+              'Status': 'Enabled'}]
     lifecycle = {'Rules': rules}
     response = client.put_bucket_lifecycle_configuration(Bucket=bucket_name, LifecycleConfiguration=lifecycle)
     assert response['ResponseMetadata']['HTTPStatusCode'] == 200
+
 
 @pytest.mark.lifecycle
 def test_lifecycle_set_empty_filter():
     bucket_name = get_new_bucket()
     client = get_client()
-    rules=[{'ID': 'rule1', 'Expiration': {'ExpiredObjectDeleteMarker': True}, 'Filter': {}, 'Status':'Enabled'}]
+    rules = [{'ID': 'rule1', 'Expiration': {'ExpiredObjectDeleteMarker': True}, 'Filter': {}, 'Status': 'Enabled'}]
     lifecycle = {'Rules': rules}
     response = client.put_bucket_lifecycle_configuration(Bucket=bucket_name, LifecycleConfiguration=lifecycle)
     assert response['ResponseMetadata']['HTTPStatusCode'] == 200
+
 
 @pytest.mark.lifecycle
 @pytest.mark.lifecycle_expiration
@@ -8676,27 +9296,29 @@ def test_lifecycle_deletemarker_expiration():
     client.delete_object(Bucket=bucket_name, Key="test1/a")
     client.delete_object(Bucket=bucket_name, Key="test2/abc")
 
-    response  = client.list_object_versions(Bucket=bucket_name)
+    response = client.list_object_versions(Bucket=bucket_name)
     init_versions = response['Versions']
     deleted_versions = response['DeleteMarkers']
     total_init_versions = init_versions + deleted_versions
 
-    rules=[{'ID': 'rule1', 'NoncurrentVersionExpiration': {'NoncurrentDays': 1}, 'Expiration': {'ExpiredObjectDeleteMarker': True}, 'Prefix': 'test1/', 'Status':'Enabled'}]
+    rules = [{'ID': 'rule1', 'NoncurrentVersionExpiration': {'NoncurrentDays': 1},
+              'Expiration': {'ExpiredObjectDeleteMarker': True}, 'Prefix': 'test1/', 'Status': 'Enabled'}]
     lifecycle = {'Rules': rules}
     client.put_bucket_lifecycle_configuration(Bucket=bucket_name, LifecycleConfiguration=lifecycle)
 
     lc_interval = get_lc_debug_interval()
 
     # Wait for first expiration (plus fudge to handle the timer window)
-    time.sleep(7*lc_interval)
+    time.sleep(7 * lc_interval)
 
-    response  = client.list_object_versions(Bucket=bucket_name)
+    response = client.list_object_versions(Bucket=bucket_name)
     init_versions = response['Versions']
     deleted_versions = response['DeleteMarkers']
     total_expire_versions = init_versions + deleted_versions
 
     assert len(total_init_versions) == 4
     assert len(total_expire_versions) == 2
+
 
 @pytest.mark.lifecycle
 def test_lifecycle_set_multipart():
@@ -8711,6 +9333,7 @@ def test_lifecycle_set_multipart():
     lifecycle = {'Rules': rules}
     response = client.put_bucket_lifecycle_configuration(Bucket=bucket_name, LifecycleConfiguration=lifecycle)
     assert response['ResponseMetadata']['HTTPStatusCode'] == 200
+
 
 @pytest.mark.lifecycle
 @pytest.mark.lifecycle_expiration
@@ -8740,22 +9363,27 @@ def test_lifecycle_multipart_expiration():
     lc_interval = get_lc_debug_interval()
 
     # Wait for first expiration (plus fudge to handle the timer window)
-    time.sleep(5*lc_interval)
+    time.sleep(5 * lc_interval)
 
     response = client.list_multipart_uploads(Bucket=bucket_name)
     expired_uploads = response['Uploads']
     assert len(init_uploads) == 2
     assert len(expired_uploads) == 1
 
+
 @pytest.mark.lifecycle
 def test_lifecycle_transition_set_invalid_date():
     bucket_name = get_new_bucket()
     client = get_client()
-    rules=[{'ID': 'rule1', 'Expiration': {'Date': '2023-09-27'},'Transitions': [{'Date': '20220927','StorageClass': 'GLACIER'}],'Prefix': 'test1/', 'Status':'Enabled'}]
+    rules = [{'ID': 'rule1', 'Expiration': {'Date': '2023-09-27'},
+              'Transitions': [{'Date': '20220927', 'StorageClass': 'GLACIER'}], 'Prefix': 'test1/',
+              'Status': 'Enabled'}]
     lifecycle = {'Rules': rules}
-    e = assert_raises(ClientError, client.put_bucket_lifecycle_configuration, Bucket=bucket_name, LifecycleConfiguration=lifecycle)
+    e = assert_raises(ClientError, client.put_bucket_lifecycle_configuration, Bucket=bucket_name,
+                      LifecycleConfiguration=lifecycle)
     status, error_code = _get_status_and_error_code(e.response)
     assert status == 400
+
 
 def _test_encryption_sse_customer_write(file_size):
     """
@@ -8766,7 +9394,7 @@ def _test_encryption_sse_customer_write(file_size):
     bucket_name = get_new_bucket()
     client = get_client()
     key = 'testobj'
-    data = 'A'*file_size
+    data = 'A' * file_size
     sse_client_headers = {
         'x-amz-server-side-encryption-customer-algorithm': 'AES256',
         'x-amz-server-side-encryption-customer-key': 'pO3upElrwuEXSoFwCfnZPdSsmt/xWeFa0N9KgDijwVs=',
@@ -8783,6 +9411,7 @@ def _test_encryption_sse_customer_write(file_size):
     body = _get_body(response)
     assert body == data
 
+
 # The test harness for lifecycle is configured to treat days as 10 second intervals.
 @pytest.mark.lifecycle
 @pytest.mark.lifecycle_transition
@@ -8795,8 +9424,9 @@ def test_lifecycle_transition():
     bucket_name = _create_objects(keys=['expire1/foo', 'expire1/bar', 'keep2/foo',
                                         'keep2/bar', 'expire3/foo', 'expire3/bar'])
     client = get_client()
-    rules=[{'ID': 'rule1', 'Transitions': [{'Days': 1, 'StorageClass': sc[1]}], 'Prefix': 'expire1/', 'Status': 'Enabled'},
-           {'ID': 'rule2', 'Transitions': [{'Days': 6, 'StorageClass': sc[2]}], 'Prefix': 'expire3/', 'Status': 'Enabled'}]
+    rules = [
+        {'ID': 'rule1', 'Transitions': [{'Days': 1, 'StorageClass': sc[1]}], 'Prefix': 'expire1/', 'Status': 'Enabled'},
+        {'ID': 'rule2', 'Transitions': [{'Days': 6, 'StorageClass': sc[2]}], 'Prefix': 'expire3/', 'Status': 'Enabled'}]
     lifecycle = {'Rules': rules}
     client.put_bucket_lifecycle_configuration(Bucket=bucket_name, LifecycleConfiguration=lifecycle)
 
@@ -8808,7 +9438,7 @@ def test_lifecycle_transition():
     lc_interval = get_lc_debug_interval()
 
     # Wait for first expiration (plus fudge to handle the timer window)
-    time.sleep(4*lc_interval)
+    time.sleep(4 * lc_interval)
     expire1_keys = list_bucket_storage_class(client, bucket_name)
     assert len(expire1_keys['STANDARD']) == 4
     assert len(expire1_keys[sc[1]]) == 2
@@ -8822,11 +9452,12 @@ def test_lifecycle_transition():
     assert len(keep2_keys[sc[2]]) == 0
 
     # Wait for final expiration cycle
-    time.sleep(5*lc_interval)
+    time.sleep(5 * lc_interval)
     expire3_keys = list_bucket_storage_class(client, bucket_name)
     assert len(expire3_keys['STANDARD']) == 2
     assert len(expire3_keys[sc[1]]) == 2
     assert len(expire3_keys[sc[2]]) == 2
+
 
 # The test harness for lifecycle is configured to treat days as 10 second intervals.
 @pytest.mark.lifecycle
@@ -8840,7 +9471,8 @@ def test_lifecycle_transition_single_rule_multi_trans():
     bucket_name = _create_objects(keys=['expire1/foo', 'expire1/bar', 'keep2/foo',
                                         'keep2/bar', 'expire3/foo', 'expire3/bar'])
     client = get_client()
-    rules=[{'ID': 'rule1', 'Transitions': [{'Days': 1, 'StorageClass': sc[1]}, {'Days': 7, 'StorageClass': sc[2]}], 'Prefix': 'expire1/', 'Status': 'Enabled'}]
+    rules = [{'ID': 'rule1', 'Transitions': [{'Days': 1, 'StorageClass': sc[1]}, {'Days': 7, 'StorageClass': sc[2]}],
+              'Prefix': 'expire1/', 'Status': 'Enabled'}]
     lifecycle = {'Rules': rules}
     client.put_bucket_lifecycle_configuration(Bucket=bucket_name, LifecycleConfiguration=lifecycle)
 
@@ -8852,7 +9484,7 @@ def test_lifecycle_transition_single_rule_multi_trans():
     lc_interval = get_lc_debug_interval()
 
     # Wait for first expiration (plus fudge to handle the timer window)
-    time.sleep(5*lc_interval)
+    time.sleep(5 * lc_interval)
     expire1_keys = list_bucket_storage_class(client, bucket_name)
     assert len(expire1_keys['STANDARD']) == 4
     assert len(expire1_keys[sc[1]]) == 2
@@ -8866,11 +9498,12 @@ def test_lifecycle_transition_single_rule_multi_trans():
     assert len(keep2_keys[sc[2]]) == 0
 
     # Wait for final expiration cycle
-    time.sleep(6*lc_interval)
+    time.sleep(6 * lc_interval)
     expire3_keys = list_bucket_storage_class(client, bucket_name)
     assert len(expire3_keys['STANDARD']) == 4
     assert len(expire3_keys[sc[1]]) == 0
     assert len(expire3_keys[sc[2]]) == 2
+
 
 @pytest.mark.lifecycle
 @pytest.mark.lifecycle_transition
@@ -8952,24 +9585,25 @@ def test_lifecycle_noncur_transition():
 
     lc_interval = get_lc_debug_interval()
 
-    time.sleep(4*lc_interval)
+    time.sleep(4 * lc_interval)
     expire1_keys = list_bucket_storage_class(client, bucket)
     assert len(expire1_keys['STANDARD']) == 2
     assert len(expire1_keys[sc[1]]) == 4
     assert len(expire1_keys[sc[2]]) == 0
 
-    time.sleep(4*lc_interval)
+    time.sleep(4 * lc_interval)
     expire1_keys = list_bucket_storage_class(client, bucket)
     assert len(expire1_keys['STANDARD']) == 2
     assert len(expire1_keys[sc[1]]) == 0
     assert len(expire1_keys[sc[2]]) == 4
 
-    time.sleep(6*lc_interval)
+    time.sleep(6 * lc_interval)
     expire1_keys = list_bucket_storage_class(client, bucket)
     assert len(expire1_keys['STANDARD']) == 2
     assert len(expire1_keys[sc[1]]) == 0
     assert len(expire1_keys[sc[2]]) == 0
 
+@pytest.mark.versioning
 @pytest.mark.lifecycle
 @pytest.mark.lifecycle_expiration
 @pytest.mark.lifecycle_transition
@@ -8994,27 +9628,28 @@ def test_lifecycle_plain_null_version_current_transition():
     check_configure_versioning_retry(bucket, "Enabled", "Enabled")
 
     client.put_bucket_lifecycle_configuration(Bucket=bucket, LifecycleConfiguration={
-            'Rules': [
-                {
-                    'ID': 'rule1',
-                    'Prefix': 'testobj',
-                    'Status': 'Enabled',
-                    'Transitions': [
-                        {
-                            'Days': 1,
-                            'StorageClass': target_sc
-                        },
-                    ]
-                }
-            ]
-        })
+        'Rules': [
+            {
+                'ID': 'rule1',
+                'Prefix': 'testobj',
+                'Status': 'Enabled',
+                'Transitions': [
+                    {
+                        'Days': 1,
+                        'StorageClass': target_sc
+                    },
+                ]
+            }
+        ]
+    })
 
     lc_interval = get_lc_debug_interval()
-    time.sleep(4*lc_interval)
+    time.sleep(4 * lc_interval)
 
     keys = list_bucket_storage_class(client, bucket)
     assert len(keys['STANDARD']) == 0
     assert len(keys[target_sc]) == 1
+
 
 def verify_object(client, bucket, key, content=None, sc=None):
     response = client.get_object(Bucket=bucket, Key=key)
@@ -9024,12 +9659,13 @@ def verify_object(client, bucket, key, content=None, sc=None):
 
     if ('StorageClass' in response):
         assert response['StorageClass'] == sc
-    else: #storage class should be STANDARD
+    else:  # storage class should be STANDARD
         assert 'STANDARD' == sc
 
     if (content != None):
         body = _get_body(response)
         assert body == content
+
 
 # The test harness for lifecycle is configured to treat days as 10 second intervals.
 @pytest.mark.lifecycle
@@ -9046,10 +9682,11 @@ def test_lifecycle_cloud_transition():
     target_path = get_cloud_target_path()
     target_sc = get_cloud_target_storage_class()
 
-    keys=['expire1/foo', 'expire1/bar', 'keep2/foo', 'keep2/bar']
+    keys = ['expire1/foo', 'expire1/bar', 'keep2/foo', 'keep2/bar']
     bucket_name = _create_objects(keys=keys)
     client = get_client()
-    rules=[{'ID': 'rule1', 'Transitions': [{'Days': 1, 'StorageClass': cloud_sc}], 'Prefix': 'expire1/', 'Status': 'Enabled'}]
+    rules = [{'ID': 'rule1', 'Transitions': [{'Days': 1, 'StorageClass': cloud_sc}], 'Prefix': 'expire1/',
+              'Status': 'Enabled'}]
     lifecycle = {'Rules': rules}
     client.put_bucket_lifecycle_configuration(Bucket=bucket_name, LifecycleConfiguration=lifecycle)
 
@@ -9061,7 +9698,7 @@ def test_lifecycle_cloud_transition():
     lc_interval = get_lc_debug_interval()
 
     # Wait for first expiration (plus fudge to handle the timer window)
-    time.sleep(10*lc_interval)
+    time.sleep(10 * lc_interval)
     expire1_keys = list_bucket_storage_class(client, bucket_name)
     assert len(expire1_keys['STANDARD']) == 2
 
@@ -9070,7 +9707,7 @@ def test_lifecycle_cloud_transition():
     else:
         assert len(expire1_keys[cloud_sc]) == 0
 
-    time.sleep(2*lc_interval)
+    time.sleep(2 * lc_interval)
     # Check if objects copied to target path
     if target_path == None:
         target_path = "rgwx-default-" + cloud_sc.lower() + "-cloud-bucket"
@@ -9078,7 +9715,7 @@ def test_lifecycle_cloud_transition():
 
     cloud_client = get_cloud_client()
 
-    time.sleep(12*lc_interval)
+    time.sleep(12 * lc_interval)
     expire1_key1_str = prefix + keys[0]
     verify_object(cloud_client, target_path, expire1_key1_str, keys[0], target_sc)
 
@@ -9092,7 +9729,7 @@ def test_lifecycle_cloud_transition():
         response = client.head_object(Bucket=bucket_name, Key=keys[0])
         assert 0 == response['ContentLength']
         assert cloud_sc == response['StorageClass']
-    
+
         # GET should return InvalidObjectState error
         e = assert_raises(ClientError, client.get_object, Bucket=bucket_name, Key=src_key)
         status, error_code = _get_status_and_error_code(e.response)
@@ -9112,6 +9749,7 @@ def test_lifecycle_cloud_transition():
         status, error_code = _get_status_and_error_code(e.response)
         assert status == 404
         assert error_code == 'NoSuchKey'
+
 
 # Similar to 'test_lifecycle_transition' but for cloud transition
 @pytest.mark.lifecycle
@@ -9135,12 +9773,14 @@ def test_lifecycle_cloud_multiple_transition():
 
     sc = ['STANDARD', sc1, cloud_sc]
 
-    keys=['expire1/foo', 'expire1/bar', 'keep2/foo', 'keep2/bar']
+    keys = ['expire1/foo', 'expire1/bar', 'keep2/foo', 'keep2/bar']
     bucket_name = _create_objects(keys=keys)
     client = get_client()
-    rules=[{'ID': 'rule1', 'Transitions': [{'Days': 1, 'StorageClass': sc1}], 'Prefix': 'expire1/', 'Status': 'Enabled'},
-           {'ID': 'rule2', 'Transitions': [{'Days': 5, 'StorageClass': cloud_sc}], 'Prefix': 'expire1/', 'Status': 'Enabled'},
-           {'ID': 'rule3', 'Expiration': {'Days': 9}, 'Prefix': 'expire1/', 'Status': 'Enabled'}]
+    rules = [
+        {'ID': 'rule1', 'Transitions': [{'Days': 1, 'StorageClass': sc1}], 'Prefix': 'expire1/', 'Status': 'Enabled'},
+        {'ID': 'rule2', 'Transitions': [{'Days': 5, 'StorageClass': cloud_sc}], 'Prefix': 'expire1/',
+         'Status': 'Enabled'},
+        {'ID': 'rule3', 'Expiration': {'Days': 9}, 'Prefix': 'expire1/', 'Status': 'Enabled'}]
     lifecycle = {'Rules': rules}
     client.put_bucket_lifecycle_configuration(Bucket=bucket_name, LifecycleConfiguration=lifecycle)
 
@@ -9152,14 +9792,14 @@ def test_lifecycle_cloud_multiple_transition():
     lc_interval = get_lc_debug_interval()
 
     # Wait for first expiration (plus fudge to handle the timer window)
-    time.sleep(4*lc_interval)
+    time.sleep(4 * lc_interval)
     expire1_keys = list_bucket_storage_class(client, bucket_name)
     assert len(expire1_keys['STANDARD']) == 2
     assert len(expire1_keys[sc[1]]) == 2
     assert len(expire1_keys[sc[2]]) == 0
 
     # Wait for next expiration cycle
-    time.sleep(7*lc_interval)
+    time.sleep(7 * lc_interval)
     expire1_keys = list_bucket_storage_class(client, bucket_name)
     assert len(expire1_keys['STANDARD']) == 2
     assert len(expire1_keys[sc[1]]) == 0
@@ -9170,11 +9810,12 @@ def test_lifecycle_cloud_multiple_transition():
         assert len(expire1_keys[sc[2]]) == 0
 
     # Wait for final expiration cycle
-    time.sleep(12*lc_interval)
+    time.sleep(12 * lc_interval)
     expire3_keys = list_bucket_storage_class(client, bucket_name)
     assert len(expire3_keys['STANDARD']) == 2
     assert len(expire3_keys[sc[1]]) == 0
     assert len(expire3_keys[sc[2]]) == 0
+
 
 # Noncurrent objects for cloud transition
 @pytest.mark.lifecycle
@@ -9230,17 +9871,17 @@ def test_lifecycle_noncur_cloud_transition():
     init_keys = list_bucket_storage_class(client, bucket)
     assert len(init_keys['STANDARD']) == 6
 
-    response  = client.list_object_versions(Bucket=bucket)
+    response = client.list_object_versions(Bucket=bucket)
 
     lc_interval = get_lc_debug_interval()
 
-    time.sleep(4*lc_interval)
+    time.sleep(4 * lc_interval)
     expire1_keys = list_bucket_storage_class(client, bucket)
     assert len(expire1_keys['STANDARD']) == 2
     assert len(expire1_keys[sc[1]]) == 4
     assert len(expire1_keys[sc[2]]) == 0
 
-    time.sleep(10*lc_interval)
+    time.sleep(10 * lc_interval)
     expire1_keys = list_bucket_storage_class(client, bucket)
     assert len(expire1_keys['STANDARD']) == 2
     assert len(expire1_keys[sc[1]]) == 0
@@ -9250,7 +9891,7 @@ def test_lifecycle_noncur_cloud_transition():
     else:
         assert len(expire1_keys[sc[2]]) == 4
 
-    #check if versioned object exists on cloud endpoint
+    # check if versioned object exists on cloud endpoint
     if target_path == None:
         target_path = "rgwx-default-" + cloud_sc.lower() + "-cloud-bucket"
     prefix = bucket + "/"
@@ -9261,9 +9902,10 @@ def test_lifecycle_noncur_cloud_transition():
     result = list_bucket_versions(client, bucket)
 
     for src_key in keys:
-        for k in result[src_key]: 
+        for k in result[src_key]:
             expire1_key1_str = prefix + 'test1/a' + "-" + k['VersionId']
             verify_object(cloud_client, target_path, expire1_key1_str, None, target_sc)
+
 
 # The test harness for lifecycle is configured to treat days as 10 second intervals.
 @pytest.mark.lifecycle
@@ -9282,11 +9924,12 @@ def test_lifecycle_cloud_transition_large_obj():
 
     bucket = get_new_bucket()
     client = get_client()
-    rules=[{'ID': 'rule1', 'Transitions': [{'Days': 1, 'StorageClass': cloud_sc}], 'Prefix': 'expire1/', 'Status': 'Enabled'}]
+    rules = [{'ID': 'rule1', 'Transitions': [{'Days': 1, 'StorageClass': cloud_sc}], 'Prefix': 'expire1/',
+              'Status': 'Enabled'}]
 
     keys = ['keep/multi', 'expire1/multi']
-    size = 9*1024*1024
-    data = 'A'*size
+    size = 9 * 1024 * 1024
+    data = 'A' * size
 
     for k in keys:
         client.put_object(Bucket=bucket, Body=data, Key=k)
@@ -9298,11 +9941,10 @@ def test_lifecycle_cloud_transition_large_obj():
     lc_interval = get_lc_debug_interval()
 
     # Wait for first expiration (plus fudge to handle the timer window)
-    time.sleep(8*lc_interval)
+    time.sleep(8 * lc_interval)
     expire1_keys = list_bucket_storage_class(client, bucket)
     assert len(expire1_keys['STANDARD']) == 1
 
-    
     if (retain_head_object != None and retain_head_object == "true"):
         assert len(expire1_keys[cloud_sc]) == 1
     else:
@@ -9314,11 +9956,12 @@ def test_lifecycle_cloud_transition_large_obj():
     prefix = bucket + "/"
 
     # multipart upload takes time
-    time.sleep(12*lc_interval)
+    time.sleep(12 * lc_interval)
     cloud_client = get_cloud_client()
 
     expire1_key1_str = prefix + keys[1]
     verify_object(cloud_client, target_path, expire1_key1_str, data, target_sc)
+
 
 @pytest.mark.encryption
 @pytest.mark.fails_on_dbstore
@@ -9335,7 +9978,7 @@ def test_encrypted_transfer_1kb():
 @pytest.mark.encryption
 @pytest.mark.fails_on_dbstore
 def test_encrypted_transfer_1MB():
-    _test_encryption_sse_customer_write(1024*1024)
+    _test_encryption_sse_customer_write(1024 * 1024)
 
 
 @pytest.mark.encryption
@@ -9348,7 +9991,7 @@ def test_encrypted_transfer_13b():
 def test_encryption_sse_c_method_head():
     bucket_name = get_new_bucket()
     client = get_client()
-    data = 'A'*1000
+    data = 'A' * 1000
     key = 'testobj'
     sse_client_headers = {
         'x-amz-server-side-encryption-customer-algorithm': 'AES256',
@@ -9369,11 +10012,12 @@ def test_encryption_sse_c_method_head():
     response = client.head_object(Bucket=bucket_name, Key=key)
     assert response['ResponseMetadata']['HTTPStatusCode'] == 200
 
+
 @pytest.mark.encryption
 def test_encryption_sse_c_present():
     bucket_name = get_new_bucket()
     client = get_client()
-    data = 'A'*1000
+    data = 'A' * 1000
     key = 'testobj'
     sse_client_headers = {
         'x-amz-server-side-encryption-customer-algorithm': 'AES256',
@@ -9389,11 +10033,12 @@ def test_encryption_sse_c_present():
     status, error_code = _get_status_and_error_code(e.response)
     assert status == 400
 
+
 @pytest.mark.encryption
 def test_encryption_sse_c_other_key():
     bucket_name = get_new_bucket()
     client = get_client()
-    data = 'A'*100
+    data = 'A' * 100
     key = 'testobj'
     sse_client_headers_A = {
         'x-amz-server-side-encryption-customer-algorithm': 'AES256',
@@ -9416,11 +10061,12 @@ def test_encryption_sse_c_other_key():
     status, error_code = _get_status_and_error_code(e.response)
     assert status == 400
 
+
 @pytest.mark.encryption
 def test_encryption_sse_c_invalid_md5():
     bucket_name = get_new_bucket()
     client = get_client()
-    data = 'A'*100
+    data = 'A' * 100
     key = 'testobj'
     sse_client_headers = {
         'x-amz-server-side-encryption-customer-algorithm': 'AES256',
@@ -9434,11 +10080,12 @@ def test_encryption_sse_c_invalid_md5():
     status, error_code = _get_status_and_error_code(e.response)
     assert status == 400
 
+
 @pytest.mark.encryption
 def test_encryption_sse_c_no_md5():
     bucket_name = get_new_bucket()
     client = get_client()
-    data = 'A'*100
+    data = 'A' * 100
     key = 'testobj'
     sse_client_headers = {
         'x-amz-server-side-encryption-customer-algorithm': 'AES256',
@@ -9449,11 +10096,12 @@ def test_encryption_sse_c_no_md5():
     client.meta.events.register('before-call.s3.PutObject', lf)
     e = assert_raises(ClientError, client.put_object, Bucket=bucket_name, Key=key, Body=data)
 
+
 @pytest.mark.encryption
 def test_encryption_sse_c_no_key():
     bucket_name = get_new_bucket()
     client = get_client()
-    data = 'A'*100
+    data = 'A' * 100
     key = 'testobj'
     sse_client_headers = {
         'x-amz-server-side-encryption-customer-algorithm': 'AES256',
@@ -9463,11 +10111,12 @@ def test_encryption_sse_c_no_key():
     client.meta.events.register('before-call.s3.PutObject', lf)
     e = assert_raises(ClientError, client.put_object, Bucket=bucket_name, Key=key, Body=data)
 
+
 @pytest.mark.encryption
 def test_encryption_key_no_sse_c():
     bucket_name = get_new_bucket()
     client = get_client()
-    data = 'A'*100
+    data = 'A' * 100
     key = 'testobj'
     sse_client_headers = {
         'x-amz-server-side-encryption-customer-key': 'pO3upElrwuEXSoFwCfnZPdSsmt/xWeFa0N9KgDijwVs=',
@@ -9480,7 +10129,9 @@ def test_encryption_key_no_sse_c():
     status, error_code = _get_status_and_error_code(e.response)
     assert status == 400
 
-def _multipart_upload_enc(client, bucket_name, key, size, part_size, init_headers, part_headers, metadata, resend_parts):
+
+def _multipart_upload_enc(client, bucket_name, key, size, part_size, init_headers, part_headers, metadata,
+                          resend_parts):
     """
     generate a multi-part upload for a random file of specifed size,
     if requested, generate a list of the parts
@@ -9501,7 +10152,7 @@ def _multipart_upload_enc(client, bucket_name, key, size, part_size, init_header
     parts = []
     for i, part in enumerate(generate_random(size, part_size)):
         # part_num is necessary because PartNumber for upload_part and in parts must start at 1 and i starts at 0
-        part_num = i+1
+        part_num = i + 1
         s += part
         lf = (lambda **kwargs: kwargs['params']['headers'].update(part_headers))
         client.meta.events.register('before-call.s3.UploadPart', lf)
@@ -9513,6 +10164,7 @@ def _multipart_upload_enc(client, bucket_name, key, size, part_size, init_header
             client.upload_part(UploadId=upload_id, Bucket=bucket_name, Key=key, PartNumber=part_num, Body=part)
 
     return (upload_id, s, parts)
+
 
 def _check_content_using_range_enc(client, bucket_name, key, data, size, step, enc_headers=None):
     for ofs in range(0, size, step):
@@ -9527,7 +10179,8 @@ def _check_content_using_range_enc(client, bucket_name, key, data, size, step, e
         read_range = response['ContentLength']
         body = _get_body(response)
         assert read_range == toread
-        assert body == data[ofs:end+1]
+        assert body == data[ofs:end + 1]
+
 
 @pytest.mark.encryption
 @pytest.mark.fails_on_dbstore
@@ -9537,7 +10190,7 @@ def test_encryption_sse_c_multipart_upload():
     key = "multipart_enc"
     content_type = 'text/plain'
     objlen = 30 * 1024 * 1024
-    partlen = 5*1024*1024
+    partlen = 5 * 1024 * 1024
     metadata = {'foo': 'bar'}
     enc_headers = {
         'x-amz-server-side-encryption-customer-algorithm': 'AES256',
@@ -9548,7 +10201,9 @@ def test_encryption_sse_c_multipart_upload():
     resend_parts = []
 
     (upload_id, data, parts) = _multipart_upload_enc(client, bucket_name, key, objlen,
-            part_size=partlen, init_headers=enc_headers, part_headers=enc_headers, metadata=metadata, resend_parts=resend_parts)
+                                                     part_size=partlen, init_headers=enc_headers,
+                                                     part_headers=enc_headers, metadata=metadata,
+                                                     resend_parts=resend_parts)
 
     lf = (lambda **kwargs: kwargs['params']['headers'].update(enc_headers))
     client.meta.events.register('before-call.s3.CompleteMultipartUpload', lf)
@@ -9572,8 +10227,9 @@ def test_encryption_sse_c_multipart_upload():
 
     _check_content_using_range_enc(client, bucket_name, key, data, size, 1000000, enc_headers=enc_headers)
     _check_content_using_range_enc(client, bucket_name, key, data, size, 10000000, enc_headers=enc_headers)
-    for i in range(-1,2):
+    for i in range(-1, 2):
         _check_content_using_range_enc(client, bucket_name, key, data, size, partlen + i, enc_headers=enc_headers)
+
 
 @pytest.mark.encryption
 @pytest.mark.fails_on_dbstore
@@ -9583,7 +10239,7 @@ def test_encryption_sse_c_unaligned_multipart_upload():
     key = "multipart_enc"
     content_type = 'text/plain'
     objlen = 30 * 1024 * 1024
-    partlen = 1 + 5 * 1024 * 1024 # not a multiple of the 4k encryption block size
+    partlen = 1 + 5 * 1024 * 1024  # not a multiple of the 4k encryption block size
     metadata = {'foo': 'bar'}
     enc_headers = {
         'x-amz-server-side-encryption-customer-algorithm': 'AES256',
@@ -9594,7 +10250,9 @@ def test_encryption_sse_c_unaligned_multipart_upload():
     resend_parts = []
 
     (upload_id, data, parts) = _multipart_upload_enc(client, bucket_name, key, objlen,
-            part_size=partlen, init_headers=enc_headers, part_headers=enc_headers, metadata=metadata, resend_parts=resend_parts)
+                                                     part_size=partlen, init_headers=enc_headers,
+                                                     part_headers=enc_headers, metadata=metadata,
+                                                     resend_parts=resend_parts)
 
     lf = (lambda **kwargs: kwargs['params']['headers'].update(enc_headers))
     client.meta.events.register('before-call.s3.CompleteMultipartUpload', lf)
@@ -9618,8 +10276,9 @@ def test_encryption_sse_c_unaligned_multipart_upload():
 
     _check_content_using_range_enc(client, bucket_name, key, data, size, 1000000, enc_headers=enc_headers)
     _check_content_using_range_enc(client, bucket_name, key, data, size, 10000000, enc_headers=enc_headers)
-    for i in range(-1,2):
+    for i in range(-1, 2):
         _check_content_using_range_enc(client, bucket_name, key, data, size, partlen + i, enc_headers=enc_headers)
+
 
 @pytest.mark.encryption
 # TODO: remove this fails_on_rgw when I fix it
@@ -9644,10 +10303,12 @@ def test_encryption_sse_c_multipart_invalid_chunks_1():
     }
     resend_parts = []
 
-    e = assert_raises(ClientError, _multipart_upload_enc, client=client,  bucket_name=bucket_name,
-            key=key, size=objlen, part_size=5*1024*1024, init_headers=init_headers, part_headers=part_headers, metadata=metadata, resend_parts=resend_parts)
+    e = assert_raises(ClientError, _multipart_upload_enc, client=client, bucket_name=bucket_name,
+                      key=key, size=objlen, part_size=5 * 1024 * 1024, init_headers=init_headers,
+                      part_headers=part_headers, metadata=metadata, resend_parts=resend_parts)
     status, error_code = _get_status_and_error_code(e.response)
     assert status == 400
+
 
 @pytest.mark.encryption
 # TODO: remove this fails_on_rgw when I fix it
@@ -9672,10 +10333,12 @@ def test_encryption_sse_c_multipart_invalid_chunks_2():
     }
     resend_parts = []
 
-    e = assert_raises(ClientError, _multipart_upload_enc, client=client,  bucket_name=bucket_name,
-            key=key, size=objlen, part_size=5*1024*1024, init_headers=init_headers, part_headers=part_headers, metadata=metadata, resend_parts=resend_parts)
+    e = assert_raises(ClientError, _multipart_upload_enc, client=client, bucket_name=bucket_name,
+                      key=key, size=objlen, part_size=5 * 1024 * 1024, init_headers=init_headers,
+                      part_headers=part_headers, metadata=metadata, resend_parts=resend_parts)
     status, error_code = _get_status_and_error_code(e.response)
     assert status == 400
+
 
 @pytest.mark.encryption
 def test_encryption_sse_c_multipart_bad_download():
@@ -9699,7 +10362,9 @@ def test_encryption_sse_c_multipart_bad_download():
     resend_parts = []
 
     (upload_id, data, parts) = _multipart_upload_enc(client, bucket_name, key, objlen,
-            part_size=5*1024*1024, init_headers=put_headers, part_headers=put_headers, metadata=metadata, resend_parts=resend_parts)
+                                                     part_size=5 * 1024 * 1024, init_headers=put_headers,
+                                                     part_headers=put_headers, metadata=metadata,
+                                                     resend_parts=resend_parts)
 
     lf = (lambda **kwargs: kwargs['params']['headers'].update(put_headers))
     client.meta.events.register('before-call.s3.CompleteMultipartUpload', lf)
@@ -9733,19 +10398,18 @@ def test_encryption_sse_c_post_object_authenticated_request():
     utc = pytz.utc
     expires = datetime.datetime.now(utc) + datetime.timedelta(seconds=+6000)
 
-    policy_document = {"expiration": expires.strftime("%Y-%m-%dT%H:%M:%SZ"),\
-    "conditions": [\
-    {"bucket": bucket_name},\
-    ["starts-with", "$key", "foo"],\
-    {"acl": "private"},\
-    ["starts-with", "$Content-Type", "text/plain"],\
-    ["starts-with", "$x-amz-server-side-encryption-customer-algorithm", ""], \
-    ["starts-with", "$x-amz-server-side-encryption-customer-key", ""], \
-    ["starts-with", "$x-amz-server-side-encryption-customer-key-md5", ""], \
-    ["content-length-range", 0, 1024]\
-    ]\
-    }
-
+    policy_document = {"expiration": expires.strftime("%Y-%m-%dT%H:%M:%SZ"), \
+                       "conditions": [ \
+                           {"bucket": bucket_name}, \
+                           ["starts-with", "$key", "foo"], \
+                           {"acl": "private"}, \
+                           ["starts-with", "$Content-Type", "text/plain"], \
+                           ["starts-with", "$x-amz-server-side-encryption-customer-algorithm", ""], \
+                           ["starts-with", "$x-amz-server-side-encryption-customer-key", ""], \
+                           ["starts-with", "$x-amz-server-side-encryption-customer-key-md5", ""], \
+                           ["content-length-range", 0, 1024] \
+                           ] \
+                       }
 
     json_policy_document = json.JSONEncoder().encode(policy_document)
     bytes_json_policy_document = bytes(json_policy_document, 'utf-8')
@@ -9755,13 +10419,14 @@ def test_encryption_sse_c_post_object_authenticated_request():
 
     signature = base64.b64encode(hmac.new(bytes(aws_secret_access_key, 'utf-8'), policy, hashlib.sha1).digest())
 
-    payload = OrderedDict([ ("key" , "foo.txt"),("AWSAccessKeyId" , aws_access_key_id),\
-    ("acl" , "private"),("signature" , signature),("policy" , policy),\
-    ("Content-Type" , "text/plain"),
-    ('x-amz-server-side-encryption-customer-algorithm', 'AES256'), \
-    ('x-amz-server-side-encryption-customer-key', 'pO3upElrwuEXSoFwCfnZPdSsmt/xWeFa0N9KgDijwVs='), \
-    ('x-amz-server-side-encryption-customer-key-md5', 'DWygnHRtgiJ77HCm+1rvHw=='), \
-    ('file', ('bar'))])
+    payload = OrderedDict([("key", "foo.txt"), ("AWSAccessKeyId", aws_access_key_id), \
+                           ("acl", "private"), ("signature", signature), ("policy", policy), \
+                           ("Content-Type", "text/plain"),
+                           ('x-amz-server-side-encryption-customer-algorithm', 'AES256'), \
+                           (
+                           'x-amz-server-side-encryption-customer-key', 'pO3upElrwuEXSoFwCfnZPdSsmt/xWeFa0N9KgDijwVs='), \
+                           ('x-amz-server-side-encryption-customer-key-md5', 'DWygnHRtgiJ77HCm+1rvHw=='), \
+                           ('file', ('bar'))])
 
     r = requests.post(url, files=payload, verify=get_config_ssl_verify())
     assert r.status_code == 204
@@ -9777,9 +10442,10 @@ def test_encryption_sse_c_post_object_authenticated_request():
     body = _get_body(response)
     assert body == 'bar'
 
+
 @pytest.mark.encryption
 @pytest.mark.fails_on_dbstore
-def _test_sse_kms_customer_write(file_size, key_id = 'testkey-1'):
+def _test_sse_kms_customer_write(file_size, key_id='testkey-1'):
     """
     Tests Create a file of A's, use it to set_contents_from_file.
     Create a file of B's, use it to re-set_contents_from_file.
@@ -9791,7 +10457,7 @@ def _test_sse_kms_customer_write(file_size, key_id = 'testkey-1'):
         'x-amz-server-side-encryption': 'aws:kms',
         'x-amz-server-side-encryption-aws-kms-key-id': key_id
     }
-    data = 'A'*file_size
+    data = 'A' * file_size
 
     lf = (lambda **kwargs: kwargs['params']['headers'].update(sse_kms_client_headers))
     client.meta.events.register('before-call.s3.PutObject', lf)
@@ -9800,10 +10466,6 @@ def _test_sse_kms_customer_write(file_size, key_id = 'testkey-1'):
     response = client.get_object(Bucket=bucket_name, Key='testobj')
     body = _get_body(response)
     assert body == data
-
-
-
-
 
 
 @pytest.mark.encryption
@@ -9816,7 +10478,7 @@ def test_sse_kms_method_head():
         'x-amz-server-side-encryption': 'aws:kms',
         'x-amz-server-side-encryption-aws-kms-key-id': kms_keyid
     }
-    data = 'A'*1000
+    data = 'A' * 1000
     key = 'testobj'
 
     lf = (lambda **kwargs: kwargs['params']['headers'].update(sse_kms_client_headers))
@@ -9833,6 +10495,7 @@ def test_sse_kms_method_head():
     status, error_code = _get_status_and_error_code(e.response)
     assert status == 400
 
+
 @pytest.mark.encryption
 @pytest.mark.fails_on_dbstore
 def test_sse_kms_present():
@@ -9843,7 +10506,7 @@ def test_sse_kms_present():
         'x-amz-server-side-encryption': 'aws:kms',
         'x-amz-server-side-encryption-aws-kms-key-id': kms_keyid
     }
-    data = 'A'*100
+    data = 'A' * 100
     key = 'testobj'
 
     lf = (lambda **kwargs: kwargs['params']['headers'].update(sse_kms_client_headers))
@@ -9854,6 +10517,7 @@ def test_sse_kms_present():
     body = _get_body(response)
     assert body == data
 
+
 @pytest.mark.encryption
 def test_sse_kms_no_key():
     bucket_name = get_new_bucket()
@@ -9861,7 +10525,7 @@ def test_sse_kms_no_key():
     sse_kms_client_headers = {
         'x-amz-server-side-encryption': 'aws:kms',
     }
-    data = 'A'*100
+    data = 'A' * 100
     key = 'testobj'
 
     lf = (lambda **kwargs: kwargs['params']['headers'].update(sse_kms_client_headers))
@@ -9877,7 +10541,7 @@ def test_sse_kms_not_declared():
     sse_kms_client_headers = {
         'x-amz-server-side-encryption-aws-kms-key-id': 'testkey-2'
     }
-    data = 'A'*100
+    data = 'A' * 100
     key = 'testobj'
 
     lf = (lambda **kwargs: kwargs['params']['headers'].update(sse_kms_client_headers))
@@ -9886,6 +10550,7 @@ def test_sse_kms_not_declared():
     e = assert_raises(ClientError, client.put_object, Bucket=bucket_name, Key=key, Body=data)
     status, error_code = _get_status_and_error_code(e.response)
     assert status == 400
+
 
 @pytest.mark.encryption
 @pytest.mark.fails_on_dbstore
@@ -9905,7 +10570,9 @@ def test_sse_kms_multipart_upload():
     resend_parts = []
 
     (upload_id, data, parts) = _multipart_upload_enc(client, bucket_name, key, objlen,
-            part_size=5*1024*1024, init_headers=enc_headers, part_headers=enc_headers, metadata=metadata, resend_parts=resend_parts)
+                                                     part_size=5 * 1024 * 1024, init_headers=enc_headers,
+                                                     part_headers=enc_headers, metadata=metadata,
+                                                     resend_parts=resend_parts)
 
     lf = (lambda **kwargs: kwargs['params']['headers'].update(enc_headers))
     client.meta.events.register('before-call.s3.CompleteMultipartUpload', lf)
@@ -9954,9 +10621,9 @@ def test_sse_kms_multipart_invalid_chunks_1():
     }
     resend_parts = []
 
-    _multipart_upload_enc(client, bucket_name, key, objlen, part_size=5*1024*1024,
-            init_headers=init_headers, part_headers=part_headers, metadata=metadata,
-            resend_parts=resend_parts)
+    _multipart_upload_enc(client, bucket_name, key, objlen, part_size=5 * 1024 * 1024,
+                          init_headers=init_headers, part_headers=part_headers, metadata=metadata,
+                          resend_parts=resend_parts)
 
 
 @pytest.mark.encryption
@@ -9980,9 +10647,9 @@ def test_sse_kms_multipart_invalid_chunks_2():
     }
     resend_parts = []
 
-    _multipart_upload_enc(client, bucket_name, key, objlen, part_size=5*1024*1024,
-            init_headers=init_headers, part_headers=part_headers, metadata=metadata,
-            resend_parts=resend_parts)
+    _multipart_upload_enc(client, bucket_name, key, objlen, part_size=5 * 1024 * 1024,
+                          init_headers=init_headers, part_headers=part_headers, metadata=metadata,
+                          resend_parts=resend_parts)
 
 
 @pytest.mark.encryption
@@ -9996,18 +10663,17 @@ def test_sse_kms_post_object_authenticated_request():
     utc = pytz.utc
     expires = datetime.datetime.now(utc) + datetime.timedelta(seconds=+6000)
 
-    policy_document = {"expiration": expires.strftime("%Y-%m-%dT%H:%M:%SZ"),\
-    "conditions": [\
-    {"bucket": bucket_name},\
-    ["starts-with", "$key", "foo"],\
-    {"acl": "private"},\
-    ["starts-with", "$Content-Type", "text/plain"],\
-    ["starts-with", "$x-amz-server-side-encryption", ""], \
-    ["starts-with", "$x-amz-server-side-encryption-aws-kms-key-id", ""], \
-    ["content-length-range", 0, 1024]\
-    ]\
-    }
-
+    policy_document = {"expiration": expires.strftime("%Y-%m-%dT%H:%M:%SZ"), \
+                       "conditions": [ \
+                           {"bucket": bucket_name}, \
+                           ["starts-with", "$key", "foo"], \
+                           {"acl": "private"}, \
+                           ["starts-with", "$Content-Type", "text/plain"], \
+                           ["starts-with", "$x-amz-server-side-encryption", ""], \
+                           ["starts-with", "$x-amz-server-side-encryption-aws-kms-key-id", ""], \
+                           ["content-length-range", 0, 1024] \
+                           ] \
+                       }
 
     json_policy_document = json.JSONEncoder().encode(policy_document)
     bytes_json_policy_document = bytes(json_policy_document, 'utf-8')
@@ -10017,12 +10683,12 @@ def test_sse_kms_post_object_authenticated_request():
 
     signature = base64.b64encode(hmac.new(bytes(aws_secret_access_key, 'utf-8'), policy, hashlib.sha1).digest())
 
-    payload = OrderedDict([ ("key" , "foo.txt"),("AWSAccessKeyId" , aws_access_key_id),\
-    ("acl" , "private"),("signature" , signature),("policy" , policy),\
-    ("Content-Type" , "text/plain"),
-    ('x-amz-server-side-encryption', 'aws:kms'), \
-    ('x-amz-server-side-encryption-aws-kms-key-id', kms_keyid), \
-    ('file', ('bar'))])
+    payload = OrderedDict([("key", "foo.txt"), ("AWSAccessKeyId", aws_access_key_id), \
+                           ("acl", "private"), ("signature", signature), ("policy", policy), \
+                           ("Content-Type", "text/plain"),
+                           ('x-amz-server-side-encryption', 'aws:kms'), \
+                           ('x-amz-server-side-encryption-aws-kms-key-id', kms_keyid), \
+                           ('file', ('bar'))])
 
     r = requests.post(url, files=payload, verify=get_config_ssl_verify())
     assert r.status_code == 204
@@ -10031,13 +10697,14 @@ def test_sse_kms_post_object_authenticated_request():
     body = _get_body(response)
     assert body == 'bar'
 
+
 @pytest.mark.encryption
 @pytest.mark.fails_on_dbstore
 def test_sse_kms_transfer_1b():
     kms_keyid = get_main_kms_keyid()
     if kms_keyid is None:
         pytest.skip('[s3 main] section missing kms_keyid')
-    _test_sse_kms_customer_write(1, key_id = kms_keyid)
+    _test_sse_kms_customer_write(1, key_id=kms_keyid)
 
 
 @pytest.mark.encryption
@@ -10046,7 +10713,7 @@ def test_sse_kms_transfer_1kb():
     kms_keyid = get_main_kms_keyid()
     if kms_keyid is None:
         pytest.skip('[s3 main] section missing kms_keyid')
-    _test_sse_kms_customer_write(1024, key_id = kms_keyid)
+    _test_sse_kms_customer_write(1024, key_id=kms_keyid)
 
 
 @pytest.mark.encryption
@@ -10055,7 +10722,7 @@ def test_sse_kms_transfer_1MB():
     kms_keyid = get_main_kms_keyid()
     if kms_keyid is None:
         pytest.skip('[s3 main] section missing kms_keyid')
-    _test_sse_kms_customer_write(1024*1024, key_id = kms_keyid)
+    _test_sse_kms_customer_write(1024 * 1024, key_id=kms_keyid)
 
 
 @pytest.mark.encryption
@@ -10064,7 +10731,7 @@ def test_sse_kms_transfer_13b():
     kms_keyid = get_main_kms_keyid()
     if kms_keyid is None:
         pytest.skip('[s3 main] section missing kms_keyid')
-    _test_sse_kms_customer_write(13, key_id = kms_keyid)
+    _test_sse_kms_customer_write(13, key_id=kms_keyid)
 
 
 @pytest.mark.encryption
@@ -10075,7 +10742,7 @@ def test_sse_kms_read_declare():
         'x-amz-server-side-encryption': 'aws:kms',
         'x-amz-server-side-encryption-aws-kms-key-id': 'testkey-1'
     }
-    data = 'A'*100
+    data = 'A' * 100
     key = 'testobj'
 
     client.put_object(Bucket=bucket_name, Key=key, Body=data)
@@ -10085,6 +10752,7 @@ def test_sse_kms_read_declare():
     e = assert_raises(ClientError, client.get_object, Bucket=bucket_name, Key=key)
     status, error_code = _get_status_and_error_code(e.response)
     assert status == 400
+
 
 @pytest.mark.bucket_policy
 def test_bucket_policy():
@@ -10096,24 +10764,25 @@ def test_bucket_policy():
     resource1 = "arn:aws:s3:::" + bucket_name
     resource2 = "arn:aws:s3:::" + bucket_name + "/*"
     policy_document = json.dumps(
-    {
-        "Version": "2012-10-17",
-        "Statement": [{
-        "Effect": "Allow",
-        "Principal": {"AWS": "*"},
-        "Action": "s3:ListBucket",
-        "Resource": [
-            "{}".format(resource1),
-            "{}".format(resource2)
-          ]
-        }]
-     })
+        {
+            "Version": "2012-10-17",
+            "Statement": [{
+                "Effect": "Allow",
+                "Principal": {"AWS": "*"},
+                "Action": "s3:ListBucket",
+                "Resource": [
+                    "{}".format(resource1),
+                    "{}".format(resource2)
+                ]
+            }]
+        })
 
     client.put_bucket_policy(Bucket=bucket_name, Policy=policy_document)
 
     alt_client = get_alt_client()
     response = alt_client.list_objects(Bucket=bucket_name)
     assert len(response['Contents']) == 1
+
 
 @pytest.mark.bucket_policy
 @pytest.mark.list_objects_v2
@@ -10126,24 +10795,25 @@ def test_bucketv2_policy():
     resource1 = "arn:aws:s3:::" + bucket_name
     resource2 = "arn:aws:s3:::" + bucket_name + "/*"
     policy_document = json.dumps(
-    {
-        "Version": "2012-10-17",
-        "Statement": [{
-        "Effect": "Allow",
-        "Principal": {"AWS": "*"},
-        "Action": "s3:ListBucket",
-        "Resource": [
-            "{}".format(resource1),
-            "{}".format(resource2)
-          ]
-        }]
-     })
+        {
+            "Version": "2012-10-17",
+            "Statement": [{
+                "Effect": "Allow",
+                "Principal": {"AWS": "*"},
+                "Action": "s3:ListBucket",
+                "Resource": [
+                    "{}".format(resource1),
+                    "{}".format(resource2)
+                ]
+            }]
+        })
 
     client.put_bucket_policy(Bucket=bucket_name, Policy=policy_document)
 
     alt_client = get_alt_client()
     response = alt_client.list_objects_v2(Bucket=bucket_name)
     assert len(response['Contents']) == 1
+
 
 @pytest.mark.bucket_policy
 def test_bucket_policy_acl():
@@ -10154,19 +10824,19 @@ def test_bucket_policy_acl():
 
     resource1 = "arn:aws:s3:::" + bucket_name
     resource2 = "arn:aws:s3:::" + bucket_name + "/*"
-    policy_document =  json.dumps(
-    {
-        "Version": "2012-10-17",
-        "Statement": [{
-        "Effect": "Deny",
-        "Principal": {"AWS": "*"},
-        "Action": "s3:ListBucket",
-        "Resource": [
-            "{}".format(resource1),
-            "{}".format(resource2)
-          ]
-        }]
-     })
+    policy_document = json.dumps(
+        {
+            "Version": "2012-10-17",
+            "Statement": [{
+                "Effect": "Deny",
+                "Principal": {"AWS": "*"},
+                "Action": "s3:ListBucket",
+                "Resource": [
+                    "{}".format(resource1),
+                    "{}".format(resource2)
+                ]
+            }]
+        })
 
     client.put_bucket_acl(Bucket=bucket_name, ACL='authenticated-read')
     client.put_bucket_policy(Bucket=bucket_name, Policy=policy_document)
@@ -10180,6 +10850,7 @@ def test_bucket_policy_acl():
     client.delete_bucket_policy(Bucket=bucket_name)
     client.put_bucket_acl(Bucket=bucket_name, ACL='public-read')
 
+
 @pytest.mark.bucket_policy
 @pytest.mark.list_objects_v2
 def test_bucketv2_policy_acl():
@@ -10190,19 +10861,19 @@ def test_bucketv2_policy_acl():
 
     resource1 = "arn:aws:s3:::" + bucket_name
     resource2 = "arn:aws:s3:::" + bucket_name + "/*"
-    policy_document =  json.dumps(
-    {
-        "Version": "2012-10-17",
-        "Statement": [{
-        "Effect": "Deny",
-        "Principal": {"AWS": "*"},
-        "Action": "s3:ListBucket",
-        "Resource": [
-            "{}".format(resource1),
-            "{}".format(resource2)
-          ]
-        }]
-     })
+    policy_document = json.dumps(
+        {
+            "Version": "2012-10-17",
+            "Statement": [{
+                "Effect": "Deny",
+                "Principal": {"AWS": "*"},
+                "Action": "s3:ListBucket",
+                "Resource": [
+                    "{}".format(resource1),
+                    "{}".format(resource2)
+                ]
+            }]
+        })
 
     client.put_bucket_acl(Bucket=bucket_name, ACL='authenticated-read')
     client.put_bucket_policy(Bucket=bucket_name, Policy=policy_document)
@@ -10216,6 +10887,7 @@ def test_bucketv2_policy_acl():
     client.delete_bucket_policy(Bucket=bucket_name)
     client.put_bucket_acl(Bucket=bucket_name, ACL='public-read')
 
+
 @pytest.mark.bucket_policy
 # TODO: remove this fails_on_rgw when I fix it
 @pytest.mark.fails_on_rgw
@@ -10228,37 +10900,39 @@ def test_bucket_policy_different_tenant():
     resource1 = "arn:aws:s3::*:" + bucket_name
     resource2 = "arn:aws:s3::*:" + bucket_name + "/*"
     policy_document = json.dumps(
-    {
-        "Version": "2012-10-17",
-        "Statement": [{
-        "Effect": "Allow",
-        "Principal": {"AWS": "*"},
-        "Action": "s3:ListBucket",
-        "Resource": [
-            "{}".format(resource1),
-            "{}".format(resource2)
-          ]
-        }]
-     })
+        {
+            "Version": "2012-10-17",
+            "Statement": [{
+                "Effect": "Allow",
+                "Principal": {"AWS": "*"},
+                "Action": "s3:ListBucket",
+                "Resource": [
+                    "{}".format(resource1),
+                    "{}".format(resource2)
+                ]
+            }]
+        })
 
     client.put_bucket_policy(Bucket=bucket_name, Policy=policy_document)
 
     # TODO: figure out how to change the bucketname
     def change_bucket_name(**kwargs):
-        kwargs['params']['url'] = "http://localhost:8000/:{bucket_name}?encoding-type=url".format(bucket_name=bucket_name)
+        kwargs['params']['url'] = "http://localhost:8000/:{bucket_name}?encoding-type=url".format(
+            bucket_name=bucket_name)
         kwargs['params']['url_path'] = "/:{bucket_name}".format(bucket_name=bucket_name)
         kwargs['params']['context']['signing']['bucket'] = ":{bucket_name}".format(bucket_name=bucket_name)
         print(kwargs['request_signer'])
         print(kwargs)
 
-    #bucket_name = ":" + bucket_name
+    # bucket_name = ":" + bucket_name
     tenant_client = get_tenant_client()
     tenant_client.meta.events.register('before-call.s3.ListObjects', change_bucket_name)
     response = tenant_client.list_objects(Bucket=bucket_name)
-    #alt_client = get_alt_client()
-    #response = alt_client.list_objects(Bucket=bucket_name)
+    # alt_client = get_alt_client()
+    # response = alt_client.list_objects(Bucket=bucket_name)
 
     assert len(response['Contents']) == 1
+
 
 @pytest.mark.bucket_policy
 # TODO: remove this fails_on_rgw when I fix it
@@ -10273,37 +10947,39 @@ def test_bucketv2_policy_different_tenant():
     resource1 = "arn:aws:s3::*:" + bucket_name
     resource2 = "arn:aws:s3::*:" + bucket_name + "/*"
     policy_document = json.dumps(
-    {
-        "Version": "2012-10-17",
-        "Statement": [{
-        "Effect": "Allow",
-        "Principal": {"AWS": "*"},
-        "Action": "s3:ListBucket",
-        "Resource": [
-            "{}".format(resource1),
-            "{}".format(resource2)
-          ]
-        }]
-     })
+        {
+            "Version": "2012-10-17",
+            "Statement": [{
+                "Effect": "Allow",
+                "Principal": {"AWS": "*"},
+                "Action": "s3:ListBucket",
+                "Resource": [
+                    "{}".format(resource1),
+                    "{}".format(resource2)
+                ]
+            }]
+        })
 
     client.put_bucket_policy(Bucket=bucket_name, Policy=policy_document)
 
     # TODO: figure out how to change the bucketname
     def change_bucket_name(**kwargs):
-        kwargs['params']['url'] = "http://localhost:8000/:{bucket_name}?encoding-type=url".format(bucket_name=bucket_name)
+        kwargs['params']['url'] = "http://localhost:8000/:{bucket_name}?encoding-type=url".format(
+            bucket_name=bucket_name)
         kwargs['params']['url_path'] = "/:{bucket_name}".format(bucket_name=bucket_name)
         kwargs['params']['context']['signing']['bucket'] = ":{bucket_name}".format(bucket_name=bucket_name)
         print(kwargs['request_signer'])
         print(kwargs)
 
-    #bucket_name = ":" + bucket_name
+    # bucket_name = ":" + bucket_name
     tenant_client = get_tenant_client()
     tenant_client.meta.events.register('before-call.s3.ListObjects', change_bucket_name)
     response = tenant_client.list_objects_v2(Bucket=bucket_name)
-    #alt_client = get_alt_client()
-    #response = alt_client.list_objects_v2(Bucket=bucket_name)
+    # alt_client = get_alt_client()
+    # response = alt_client.list_objects_v2(Bucket=bucket_name)
 
     assert len(response['Contents']) == 1
+
 
 @pytest.mark.bucket_policy
 def test_bucket_policy_another_bucket():
@@ -10315,18 +10991,18 @@ def test_bucket_policy_another_bucket():
     client.put_object(Bucket=bucket_name, Key=key, Body='asdf')
     client.put_object(Bucket=bucket_name2, Key=key2, Body='abcd')
     policy_document = json.dumps(
-    {
-        "Version": "2012-10-17",
-        "Statement": [{
-        "Effect": "Allow",
-        "Principal": {"AWS": "*"},
-        "Action": "s3:ListBucket",
-        "Resource": [
-            "arn:aws:s3:::*",
-            "arn:aws:s3:::*/*"
-          ]
-        }]
-     })
+        {
+            "Version": "2012-10-17",
+            "Statement": [{
+                "Effect": "Allow",
+                "Principal": {"AWS": "*"},
+                "Action": "s3:ListBucket",
+                "Resource": [
+                    "arn:aws:s3:::*",
+                    "arn:aws:s3:::*/*"
+                ]
+            }]
+        })
 
     client.put_bucket_policy(Bucket=bucket_name, Policy=policy_document)
     response = client.get_bucket_policy(Bucket=bucket_name)
@@ -10342,6 +11018,7 @@ def test_bucket_policy_another_bucket():
     response = alt_client.list_objects(Bucket=bucket_name2)
     assert len(response['Contents']) == 1
 
+
 @pytest.mark.bucket_policy
 @pytest.mark.list_objects_v2
 def test_bucketv2_policy_another_bucket():
@@ -10353,18 +11030,18 @@ def test_bucketv2_policy_another_bucket():
     client.put_object(Bucket=bucket_name, Key=key, Body='asdf')
     client.put_object(Bucket=bucket_name2, Key=key2, Body='abcd')
     policy_document = json.dumps(
-    {
-        "Version": "2012-10-17",
-        "Statement": [{
-        "Effect": "Allow",
-        "Principal": {"AWS": "*"},
-        "Action": "s3:ListBucket",
-        "Resource": [
-            "arn:aws:s3:::*",
-            "arn:aws:s3:::*/*"
-          ]
-        }]
-     })
+        {
+            "Version": "2012-10-17",
+            "Statement": [{
+                "Effect": "Allow",
+                "Principal": {"AWS": "*"},
+                "Action": "s3:ListBucket",
+                "Resource": [
+                    "arn:aws:s3:::*",
+                    "arn:aws:s3:::*/*"
+                ]
+            }]
+        })
 
     client.put_bucket_policy(Bucket=bucket_name, Policy=policy_document)
     response = client.get_bucket_policy(Bucket=bucket_name)
@@ -10379,6 +11056,7 @@ def test_bucketv2_policy_another_bucket():
     alt_client = get_alt_client()
     response = alt_client.list_objects_v2(Bucket=bucket_name2)
     assert len(response['Contents']) == 1
+
 
 @pytest.mark.bucket_policy
 # TODO: remove this fails_on_rgw when I fix it
@@ -10407,7 +11085,7 @@ def test_bucket_policy_set_condition_operator_end_with_IfExists():
     # boto3.set_stream_logger(name='botocore')
     client.put_bucket_policy(Bucket=bucket_name, Policy=policy)
 
-    request_headers={'referer': 'http://www.example.com/'}
+    request_headers = {'referer': 'http://www.example.com/'}
 
     lf = (lambda **kwargs: kwargs['params']['headers'].update(request_headers))
     client.meta.events.register('before-call.s3.GetObject', lf)
@@ -10415,7 +11093,7 @@ def test_bucket_policy_set_condition_operator_end_with_IfExists():
     response = client.get_object(Bucket=bucket_name, Key=key)
     assert response['ResponseMetadata']['HTTPStatusCode'] == 200
 
-    request_headers={'referer': 'http://www.example.com/index.html'}
+    request_headers = {'referer': 'http://www.example.com/index.html'}
 
     lf = (lambda **kwargs: kwargs['params']['headers'].update(request_headers))
     client.meta.events.register('before-call.s3.GetObject', lf)
@@ -10424,10 +11102,10 @@ def test_bucket_policy_set_condition_operator_end_with_IfExists():
     assert response['ResponseMetadata']['HTTPStatusCode'] == 200
 
     # the 'referer' headers need to be removed for this one
-    #response = client.get_object(Bucket=bucket_name, Key=key)
-    #assert response['ResponseMetadata']['HTTPStatusCode'] == 200
+    # response = client.get_object(Bucket=bucket_name, Key=key)
+    # assert response['ResponseMetadata']['HTTPStatusCode'] == 200
 
-    request_headers={'referer': 'http://example.com'}
+    request_headers = {'referer': 'http://example.com'}
 
     lf = (lambda **kwargs: kwargs['params']['headers'].update(request_headers))
     client.meta.events.register('before-call.s3.GetObject', lf)
@@ -10437,8 +11115,9 @@ def test_bucket_policy_set_condition_operator_end_with_IfExists():
     status, error_code = _get_status_and_error_code(e.response)
     assert status == 403
 
-    response =  client.get_bucket_policy(Bucket=bucket_name)
+    response = client.get_bucket_policy(Bucket=bucket_name)
     print(response)
+
 
 def _create_simple_tagset(count):
     tagset = []
@@ -10446,6 +11125,7 @@ def _create_simple_tagset(count):
         tagset.append({'Key': str(i), 'Value': str(i)})
 
     return {'TagSet': tagset}
+
 
 def _make_random_string(size):
     return ''.join(random.choice(string.ascii_letters) for _ in range(size))
@@ -10481,6 +11161,7 @@ def test_get_obj_head_tagging():
     assert response['ResponseMetadata']['HTTPStatusCode'] == 200
     assert response['ResponseMetadata']['HTTPHeaders']['x-amz-tagging-count'] == str(count)
 
+
 @pytest.mark.tagging
 @pytest.mark.fails_on_dbstore
 def test_put_max_tags():
@@ -10494,6 +11175,7 @@ def test_put_max_tags():
 
     response = client.get_object_tagging(Bucket=bucket_name, Key=key)
     assert response['TagSet'] == input_tagset['TagSet']
+
 
 @pytest.mark.tagging
 def test_put_excess_tags():
@@ -10509,6 +11191,7 @@ def test_put_excess_tags():
 
     response = client.get_object_tagging(Bucket=bucket_name, Key=key)
     assert len(response['TagSet']) == 0
+
 
 @pytest.mark.tagging
 def test_put_max_kvsize_tags():
@@ -10530,6 +11213,7 @@ def test_put_max_kvsize_tags():
     response = client.get_object_tagging(Bucket=bucket_name, Key=key)
     for kv_pair in response['TagSet']:
         assert kv_pair in input_tagset['TagSet']
+
 
 @pytest.mark.tagging
 def test_put_excess_key_tags():
@@ -10553,6 +11237,7 @@ def test_put_excess_key_tags():
     response = client.get_object_tagging(Bucket=bucket_name, Key=key)
     assert len(response['TagSet']) == 0
 
+
 @pytest.mark.tagging
 def test_put_excess_val_tags():
     key = 'testputexcesskeytags'
@@ -10574,6 +11259,7 @@ def test_put_excess_val_tags():
 
     response = client.get_object_tagging(Bucket=bucket_name, Key=key)
     assert len(response['TagSet']) == 0
+
 
 @pytest.mark.tagging
 @pytest.mark.fails_on_dbstore
@@ -10605,6 +11291,7 @@ def test_put_modify_tags():
     response = client.get_object_tagging(Bucket=bucket_name, Key=key)
     assert response['TagSet'] == input_tagset2['TagSet']
 
+
 @pytest.mark.tagging
 @pytest.mark.fails_on_dbstore
 def test_put_delete_tags():
@@ -10625,6 +11312,7 @@ def test_put_delete_tags():
     response = client.get_object_tagging(Bucket=bucket_name, Key=key)
     assert len(response['TagSet']) == 0
 
+
 @pytest.mark.tagging
 @pytest.mark.fails_on_dbstore
 def test_post_object_tags_anonymous_request():
@@ -10639,11 +11327,10 @@ def test_post_object_tags_anonymous_request():
     # There is not a simple way to change input_tagset to xml like there is in the boto2 tetss
     xml_input_tagset = "<Tagging><TagSet><Tag><Key>0</Key><Value>0</Value></Tag><Tag><Key>1</Key><Value>1</Value></Tag></TagSet></Tagging>"
 
-
     payload = OrderedDict([
-        ("key" , key_name),
-        ("acl" , "public-read"),
-        ("Content-Type" , "text/plain"),
+        ("key", key_name),
+        ("acl", "public-read"),
+        ("Content-Type", "text/plain"),
         ("tagging", xml_input_tagset),
         ('file', ('bar')),
     ])
@@ -10657,6 +11344,7 @@ def test_post_object_tags_anonymous_request():
     response = client.get_object_tagging(Bucket=bucket_name, Key=key_name)
     assert response['TagSet'] == input_tagset['TagSet']
 
+
 @pytest.mark.tagging
 def test_post_object_tags_authenticated_request():
     bucket_name = get_new_bucket()
@@ -10666,15 +11354,15 @@ def test_post_object_tags_authenticated_request():
     utc = pytz.utc
     expires = datetime.datetime.now(utc) + datetime.timedelta(seconds=+6000)
 
-    policy_document = {"expiration": expires.strftime("%Y-%m-%dT%H:%M:%SZ"),\
-    "conditions": [
-    {"bucket": bucket_name},
-        ["starts-with", "$key", "foo"],
-        {"acl": "private"},
-        ["starts-with", "$Content-Type", "text/plain"],
-        ["content-length-range", 0, 1024],
-        ["starts-with", "$tagging", ""]
-    ]}
+    policy_document = {"expiration": expires.strftime("%Y-%m-%dT%H:%M:%SZ"), \
+                       "conditions": [
+                           {"bucket": bucket_name},
+                           ["starts-with", "$key", "foo"],
+                           {"acl": "private"},
+                           ["starts-with", "$Content-Type", "text/plain"],
+                           ["content-length-range", 0, 1024],
+                           ["starts-with", "$tagging", ""]
+                       ]}
 
     # xml_input_tagset is the same as `input_tagset = _create_simple_tagset(2)` in xml
     # There is not a simple way to change input_tagset to xml like there is in the boto2 tetss
@@ -10689,11 +11377,11 @@ def test_post_object_tags_authenticated_request():
     signature = base64.b64encode(hmac.new(bytes(aws_secret_access_key, 'utf-8'), policy, hashlib.sha1).digest())
 
     payload = OrderedDict([
-        ("key" , "foo.txt"),
-        ("AWSAccessKeyId" , aws_access_key_id),\
-        ("acl" , "private"),("signature" , signature),("policy" , policy),\
+        ("key", "foo.txt"),
+        ("AWSAccessKeyId", aws_access_key_id), \
+        ("acl", "private"), ("signature", signature), ("policy", policy), \
         ("tagging", xml_input_tagset),
-        ("Content-Type" , "text/plain"),
+        ("Content-Type", "text/plain"),
         ('file', ('bar'))])
 
     r = requests.post(url, files=payload, verify=get_config_ssl_verify())
@@ -10709,14 +11397,14 @@ def test_put_obj_with_tags():
     bucket_name = get_new_bucket()
     client = get_client()
     key = 'testtagobj1'
-    data = 'A'*100
+    data = 'A' * 100
 
     tagset = []
     tagset.append({'Key': 'bar', 'Value': ''})
     tagset.append({'Key': 'foo', 'Value': 'bar'})
 
     put_obj_tag_headers = {
-        'x-amz-tagging' : 'foo=bar&bar'
+        'x-amz-tagging': 'foo=bar&bar'
     }
 
     lf = (lambda **kwargs: kwargs['params']['headers'].update(put_obj_tag_headers))
@@ -10732,8 +11420,10 @@ def test_put_obj_with_tags():
     tagset = tagset
     assert response_tagset == tagset
 
+
 def _make_arn_resource(path="*"):
     return "arn:aws:s3:::{}".format(path)
+
 
 @pytest.mark.tagging
 @pytest.mark.bucket_policy
@@ -10758,6 +11448,7 @@ def test_get_tags_acl_public():
     response = alt_client.get_object_tagging(Bucket=bucket_name, Key=key)
     assert response['TagSet'] == input_tagset['TagSet']
 
+
 @pytest.mark.tagging
 @pytest.mark.bucket_policy
 @pytest.mark.fails_on_dbstore
@@ -10779,6 +11470,7 @@ def test_put_tags_acl_public():
 
     response = client.get_object_tagging(Bucket=bucket_name, Key=key)
     assert response['TagSet'] == input_tagset['TagSet']
+
 
 @pytest.mark.tagging
 @pytest.mark.bucket_policy
@@ -10805,6 +11497,10 @@ def test_delete_tags_obj_public():
     response = client.get_object_tagging(Bucket=bucket_name, Key=key)
     assert len(response['TagSet']) == 0
 
+
+@pytest.mark.versioning
+# # @pytest.mark.skip(reason="we cannot suspend bucket versioning before enabling it first")
+@allure.description("we cannot suspend bucket versioning before enabling it first")
 def test_versioning_bucket_atomic_upload_return_version_id():
     bucket_name = get_new_bucket()
     client = get_client()
@@ -10815,11 +11511,10 @@ def test_versioning_bucket_atomic_upload_return_version_id():
     response = client.put_object(Bucket=bucket_name, Key=key)
     version_id = response['VersionId']
 
-    response  = client.list_object_versions(Bucket=bucket_name)
+    response = client.list_object_versions(Bucket=bucket_name)
     versions = response['Versions']
     for version in versions:
         assert version['VersionId'] == version_id
-
 
     # for versioning-default-bucket, no version-id should return.
     bucket_name = get_new_bucket()
@@ -10834,24 +11529,30 @@ def test_versioning_bucket_atomic_upload_return_version_id():
     response = client.put_object(Bucket=bucket_name, Key=key)
     assert not 'VersionId' in response
 
+
+@pytest.mark.versioning
+# @pytest.mark.skip(reason="we cannot suspend bucket versioning before enabling it first")
+@allure.description("we cannot suspend bucket versioning before enabling it first")
 def test_versioning_bucket_multipart_upload_return_version_id():
-    content_type='text/bla'
+    content_type = 'text/bla'
     objlen = 30 * 1024 * 1024
 
     bucket_name = get_new_bucket()
     client = get_client()
     key = 'bar'
-    metadata={'foo': 'baz'}
+    metadata = {'foo': 'baz'}
 
     # for versioning-enabled-bucket, an non-empty version-id should return
     check_configure_versioning_retry(bucket_name, "Enabled", "Enabled")
 
-    (upload_id, data, parts) = _multipart_upload(bucket_name=bucket_name, key=key, size=objlen, client=client, content_type=content_type, metadata=metadata)
+    (upload_id, data, parts) = _multipart_upload(bucket_name=bucket_name, key=key, size=objlen, client=client,
+                                                 content_type=content_type, metadata=metadata)
 
-    response = client.complete_multipart_upload(Bucket=bucket_name, Key=key, UploadId=upload_id, MultipartUpload={'Parts': parts})
+    response = client.complete_multipart_upload(Bucket=bucket_name, Key=key, UploadId=upload_id,
+                                                MultipartUpload={'Parts': parts})
     version_id = response['VersionId']
 
-    response  = client.list_object_versions(Bucket=bucket_name)
+    response = client.list_object_versions(Bucket=bucket_name)
     versions = response['Versions']
     for version in versions:
         assert version['VersionId'] == version_id
@@ -10860,9 +11561,11 @@ def test_versioning_bucket_multipart_upload_return_version_id():
     bucket_name = get_new_bucket()
     key = 'baz'
 
-    (upload_id, data, parts) = _multipart_upload(bucket_name=bucket_name, key=key, size=objlen, client=client, content_type=content_type, metadata=metadata)
+    (upload_id, data, parts) = _multipart_upload(bucket_name=bucket_name, key=key, size=objlen, client=client,
+                                                 content_type=content_type, metadata=metadata)
 
-    response = client.complete_multipart_upload(Bucket=bucket_name, Key=key, UploadId=upload_id, MultipartUpload={'Parts': parts})
+    response = client.complete_multipart_upload(Bucket=bucket_name, Key=key, UploadId=upload_id,
+                                                MultipartUpload={'Parts': parts})
     assert not 'VersionId' in response
 
     # for versioning-suspended-bucket, no version-id should return
@@ -10870,10 +11573,13 @@ def test_versioning_bucket_multipart_upload_return_version_id():
     key = 'foo'
     check_configure_versioning_retry(bucket_name, "Suspended", "Suspended")
 
-    (upload_id, data, parts) = _multipart_upload(bucket_name=bucket_name, key=key, size=objlen, client=client, content_type=content_type, metadata=metadata)
+    (upload_id, data, parts) = _multipart_upload(bucket_name=bucket_name, key=key, size=objlen, client=client,
+                                                 content_type=content_type, metadata=metadata)
 
-    response = client.complete_multipart_upload(Bucket=bucket_name, Key=key, UploadId=upload_id, MultipartUpload={'Parts': parts})
+    response = client.complete_multipart_upload(Bucket=bucket_name, Key=key, UploadId=upload_id,
+                                                MultipartUpload={'Parts': parts})
     assert not 'VersionId' in response
+
 
 @pytest.mark.tagging
 @pytest.mark.bucket_policy
@@ -10883,14 +11589,13 @@ def test_bucket_policy_get_obj_existing_tag():
     client = get_client()
 
     tag_conditional = {"StringEquals": {
-        "s3:ExistingObjectTag/security" : "public"
+        "s3:ExistingObjectTag/security": "public"
     }}
 
     resource = _make_arn_resource("{}/{}".format(bucket_name, "*"))
     policy_document = make_json_policy("s3:GetObject",
                                        resource,
                                        conditions=tag_conditional)
-
 
     client.put_bucket_policy(Bucket=bucket_name, Policy=policy_document)
     tagset = []
@@ -10930,6 +11635,7 @@ def test_bucket_policy_get_obj_existing_tag():
     status, error_code = _get_status_and_error_code(e.response)
     assert status == 403
 
+
 @pytest.mark.tagging
 @pytest.mark.bucket_policy
 @pytest.mark.fails_on_dbstore
@@ -10938,14 +11644,13 @@ def test_bucket_policy_get_obj_tagging_existing_tag():
     client = get_client()
 
     tag_conditional = {"StringEquals": {
-        "s3:ExistingObjectTag/security" : "public"
+        "s3:ExistingObjectTag/security": "public"
     }}
 
     resource = _make_arn_resource("{}/{}".format(bucket_name, "*"))
     policy_document = make_json_policy("s3:GetObjectTagging",
                                        resource,
                                        conditions=tag_conditional)
-
 
     client.put_bucket_policy(Bucket=bucket_name, Policy=policy_document)
     tagset = []
@@ -10986,7 +11691,6 @@ def test_bucket_policy_get_obj_tagging_existing_tag():
     status, error_code = _get_status_and_error_code(e.response)
     assert status == 403
 
-
     e = assert_raises(ClientError, alt_client.get_object_tagging, Bucket=bucket_name, Key='invalidtag')
     status, error_code = _get_status_and_error_code(e.response)
     assert status == 403
@@ -11000,14 +11704,13 @@ def test_bucket_policy_put_obj_tagging_existing_tag():
     client = get_client()
 
     tag_conditional = {"StringEquals": {
-        "s3:ExistingObjectTag/security" : "public"
+        "s3:ExistingObjectTag/security": "public"
     }}
 
     resource = _make_arn_resource("{}/{}".format(bucket_name, "*"))
     policy_document = make_json_policy("s3:PutObjectTagging",
                                        resource,
                                        conditions=tag_conditional)
-
 
     client.put_bucket_policy(Bucket=bucket_name, Policy=policy_document)
     tagset = []
@@ -11041,7 +11744,8 @@ def test_bucket_policy_put_obj_tagging_existing_tag():
     response = alt_client.put_object_tagging(Bucket=bucket_name, Key='publictag', Tagging=input_tagset)
     assert response['ResponseMetadata']['HTTPStatusCode'] == 200
 
-    e = assert_raises(ClientError, alt_client.put_object_tagging, Bucket=bucket_name, Key='privatetag', Tagging=input_tagset)
+    e = assert_raises(ClientError, alt_client.put_object_tagging, Bucket=bucket_name, Key='privatetag',
+                      Tagging=input_tagset)
     status, error_code = _get_status_and_error_code(e.response)
     assert status == 403
 
@@ -11056,7 +11760,8 @@ def test_bucket_policy_put_obj_tagging_existing_tag():
     # Now try putting the original tags again, this should fail
     input_tagset = {'TagSet': testtagset1}
 
-    e = assert_raises(ClientError, alt_client.put_object_tagging, Bucket=bucket_name, Key='publictag', Tagging=input_tagset)
+    e = assert_raises(ClientError, alt_client.put_object_tagging, Bucket=bucket_name, Key='publictag',
+                      Tagging=input_tagset)
     status, error_code = _get_status_and_error_code(e.response)
     assert status == 403
 
@@ -11077,7 +11782,7 @@ def test_bucket_policy_put_obj_copy_source():
     bucket_name2 = get_new_bucket()
 
     tag_conditional = {"StringLike": {
-        "s3:x-amz-copy-source" : bucket_name + "/public/*"
+        "s3:x-amz-copy-source": bucket_name + "/public/*"
     }}
 
     resource = _make_arn_resource("{}/{}".format(bucket_name2, "*"))
@@ -11108,6 +11813,7 @@ def test_bucket_policy_put_obj_copy_source():
     copy_source = {'Bucket': bucket_name, 'Key': 'private/foo'}
     check_access_denied(alt_client.copy_object, Bucket=bucket_name2, CopySource=copy_source, Key='new_foo2')
 
+
 @pytest.mark.tagging
 @pytest.mark.bucket_policy
 @pytest.mark.fails_on_dbstore
@@ -11124,7 +11830,7 @@ def test_bucket_policy_put_obj_copy_source_meta():
     bucket_name = get_new_bucket()
 
     tag_conditional = {"StringEquals": {
-        "s3:x-amz-metadata-directive" : "COPY"
+        "s3:x-amz-metadata-directive": "COPY"
     }}
 
     resource = _make_arn_resource("{}/{}".format(bucket_name, "*"))
@@ -11156,7 +11862,8 @@ def test_bucket_policy_put_obj_copy_source_meta():
     alt_client.meta.events.register('before-call.s3.CopyObject', remove_header)
 
     copy_source = {'Bucket': src_bucket_name, 'Key': 'public/bar'}
-    check_access_denied(alt_client.copy_object, Bucket=bucket_name, CopySource=copy_source, Key='new_foo2', Metadata={"foo": "bar"})
+    check_access_denied(alt_client.copy_object, Bucket=bucket_name, CopySource=copy_source, Key='new_foo2',
+                        Metadata={"foo": "bar"})
 
 
 @pytest.mark.tagging
@@ -11169,12 +11876,12 @@ def test_bucket_policy_put_obj_acl():
     # attribute a Deny conditional would negate any requests that try to set a
     # public-read/write acl
     conditional = {"StringLike": {
-        "s3:x-amz-acl" : "public*"
+        "s3:x-amz-acl": "public*"
     }}
 
     p = Policy()
     resource = _make_arn_resource("{}/{}".format(bucket_name, "*"))
-    s1 = Statement("s3:PutObject",resource)
+    s1 = Statement("s3:PutObject", resource)
     s2 = Statement("s3:PutObject", resource, effect="Deny", condition=conditional)
 
     policy_document = p.add_statement(s1).add_statement(s2).to_json()
@@ -11187,7 +11894,7 @@ def test_bucket_policy_put_obj_acl():
     # and mark a failure, however if this does raise nosetests would mark this
     # as an ERROR anyway
     response = alt_client.put_object(Bucket=bucket_name, Key=key1, Body=key1)
-    #response = alt_client.put_object_acl(Bucket=bucket_name, Key=key1, ACL='private')
+    # response = alt_client.put_object_acl(Bucket=bucket_name, Key=key1, ACL='private')
     assert response['ResponseMetadata']['HTTPStatusCode'] == 200
 
     key2 = 'public-key'
@@ -11202,7 +11909,6 @@ def test_bucket_policy_put_obj_acl():
 
 @pytest.mark.bucket_policy
 def test_bucket_policy_put_obj_grant():
-
     bucket_name = get_new_bucket()
     bucket_name2 = get_new_bucket()
     client = get_client()
@@ -11217,7 +11923,7 @@ def test_bucket_policy_put_obj_grant():
 
     owner_id_str = "id=" + main_user_id
     s3_conditional = {"StringEquals": {
-        "s3:x-amz-grant-full-control" : owner_id_str
+        "s3:x-amz-grant-full-control": owner_id_str
     }}
 
     resource = _make_arn_resource("{}/{}".format(bucket_name, "*"))
@@ -11234,7 +11940,7 @@ def test_bucket_policy_put_obj_grant():
     alt_client = get_alt_client()
     key1 = 'key1'
 
-    lf = (lambda **kwargs: kwargs['params']['headers'].update({"x-amz-grant-full-control" : owner_id_str}))
+    lf = (lambda **kwargs: kwargs['params']['headers'].update({"x-amz-grant-full-control": owner_id_str}))
     alt_client.meta.events.register('before-call.s3.PutObject', lf)
 
     response = alt_client.put_object(Bucket=bucket_name, Key=key1, Body=key1)
@@ -11269,10 +11975,10 @@ def test_put_obj_enc_conflict_c_s3():
 
     # boto3.set_stream_logger(name='botocore')
 
-    key1_str ='testobj'
+    key1_str = 'testobj'
 
     sse_client_headers = {
-        'x-amz-server-side-encryption' : 'AES256',
+        'x-amz-server-side-encryption': 'AES256',
         'x-amz-server-side-encryption-customer-algorithm': 'AES256',
         'x-amz-server-side-encryption-customer-key': 'pO3upElrwuEXSoFwCfnZPdSsmt/xWeFa0N9KgDijwVs=',
         'x-amz-server-side-encryption-customer-key-md5': 'DWygnHRtgiJ77HCm+1rvHw=='
@@ -11285,6 +11991,7 @@ def test_put_obj_enc_conflict_c_s3():
     assert status == 400
     assert error_code == 'InvalidArgument'
 
+
 @pytest.mark.encryption
 def test_put_obj_enc_conflict_c_kms():
     kms_keyid = get_main_kms_keyid()
@@ -11295,10 +12002,10 @@ def test_put_obj_enc_conflict_c_kms():
 
     # boto3.set_stream_logger(name='botocore')
 
-    key1_str ='testobj'
+    key1_str = 'testobj'
 
     sse_client_headers = {
-        'x-amz-server-side-encryption' : 'aws:kms',
+        'x-amz-server-side-encryption': 'aws:kms',
         'x-amz-server-side-encryption-aws-kms-key-id': kms_keyid,
         'x-amz-server-side-encryption-customer-algorithm': 'AES256',
         'x-amz-server-side-encryption-customer-key': 'pO3upElrwuEXSoFwCfnZPdSsmt/xWeFa0N9KgDijwVs=',
@@ -11312,6 +12019,7 @@ def test_put_obj_enc_conflict_c_kms():
     assert status == 400
     assert error_code == 'InvalidArgument'
 
+
 @pytest.mark.encryption
 def test_put_obj_enc_conflict_s3_kms():
     kms_keyid = get_main_kms_keyid()
@@ -11322,10 +12030,10 @@ def test_put_obj_enc_conflict_s3_kms():
 
     # boto3.set_stream_logger(name='botocore')
 
-    key1_str ='testobj'
+    key1_str = 'testobj'
 
     sse_client_headers = {
-        'x-amz-server-side-encryption' : 'AES256',
+        'x-amz-server-side-encryption': 'AES256',
         'x-amz-server-side-encryption-aws-kms-key-id': kms_keyid
     }
 
@@ -11335,6 +12043,7 @@ def test_put_obj_enc_conflict_s3_kms():
     status, error_code = _get_status_and_error_code(e.response)
     assert status == 400
     assert error_code == 'InvalidArgument'
+
 
 @pytest.mark.encryption
 def test_put_obj_enc_conflict_bad_enc_kms():
@@ -11346,10 +12055,10 @@ def test_put_obj_enc_conflict_bad_enc_kms():
 
     # boto3.set_stream_logger(name='botocore')
 
-    key1_str ='testobj'
+    key1_str = 'testobj'
 
     sse_client_headers = {
-        'x-amz-server-side-encryption' : 'aes:kms',	# aes != aws
+        'x-amz-server-side-encryption': 'aes:kms',  # aes != aws
     }
 
     lf = (lambda **kwargs: kwargs['params']['headers'].update(sse_client_headers))
@@ -11358,6 +12067,7 @@ def test_put_obj_enc_conflict_bad_enc_kms():
     status, error_code = _get_status_and_error_code(e.response)
     assert status == 400
     assert error_code == 'InvalidArgument'
+
 
 @pytest.mark.encryption
 @pytest.mark.bucket_policy
@@ -11369,13 +12079,13 @@ def test_bucket_policy_put_obj_s3_noenc():
 
     deny_incorrect_algo = {
         "StringNotEquals": {
-          "s3:x-amz-server-side-encryption": "AES256"
+            "s3:x-amz-server-side-encryption": "AES256"
         }
     }
 
     deny_unencrypted_obj = {
-        "Null" : {
-          "s3:x-amz-server-side-encryption": "true"
+        "Null": {
+            "s3:x-amz-server-side-encryption": "true"
         }
     }
 
@@ -11389,16 +12099,15 @@ def test_bucket_policy_put_obj_s3_noenc():
     # boto3.set_stream_logger(name='botocore')
 
     client.put_bucket_policy(Bucket=bucket_name, Policy=policy_document)
-    key1_str ='testobj'
+    key1_str = 'testobj'
 
-    #response = client.get_bucket_policy(Bucket=bucket_name)
-    #print response
-
+    # response = client.get_bucket_policy(Bucket=bucket_name)
+    # print response
 
     # doing this here breaks the next request w/ 400 (non-sse bug).  Do it last.
-    #check_access_denied(client.put_object, Bucket=bucket_name, Key=key1_str, Body=key1_str)
+    # check_access_denied(client.put_object, Bucket=bucket_name, Key=key1_str, Body=key1_str)
 
-    #TODO: why is this a 400 and not passing, it appears boto3 is not parsing the 200 response the rgw sends back properly
+    # TODO: why is this a 400 and not passing, it appears boto3 is not parsing the 200 response the rgw sends back properly
     # DEBUGGING: run the boto2 and compare the requests
     # DEBUGGING: try to run this with v2 auth (figure out why get_v2_client isn't working) to make the requests similar to what boto2 is doing
     # DEBUGGING: try to add other options to put_object to see if that makes the response better
@@ -11413,6 +12122,7 @@ def test_bucket_policy_put_obj_s3_noenc():
     #  errors out before it consumes the data...)
     check_access_denied(client.put_object, Bucket=bucket_name, Key=key1_str, Body=key1_str)
 
+
 @pytest.mark.encryption
 @pytest.mark.bucket_policy
 @pytest.mark.sse_s3
@@ -11425,13 +12135,13 @@ def test_bucket_policy_put_obj_s3_kms():
 
     deny_incorrect_algo = {
         "StringNotEquals": {
-          "s3:x-amz-server-side-encryption": "AES256"
+            "s3:x-amz-server-side-encryption": "AES256"
         }
     }
 
     deny_unencrypted_obj = {
-        "Null" : {
-          "s3:x-amz-server-side-encryption": "true"
+        "Null": {
+            "s3:x-amz-server-side-encryption": "true"
         }
     }
 
@@ -11445,10 +12155,10 @@ def test_bucket_policy_put_obj_s3_kms():
     # boto3.set_stream_logger(name='botocore')
 
     client.put_bucket_policy(Bucket=bucket_name, Policy=policy_document)
-    key1_str ='testobj'
+    key1_str = 'testobj'
 
-    #response = client.get_bucket_policy(Bucket=bucket_name)
-    #print response
+    # response = client.get_bucket_policy(Bucket=bucket_name)
+    # print response
 
     sse_client_headers = {
         'x-amz-server-side-encryption': 'aws:kms',
@@ -11458,6 +12168,7 @@ def test_bucket_policy_put_obj_s3_kms():
     lf = (lambda **kwargs: kwargs['params']['headers'].update(sse_client_headers))
     client.meta.events.register('before-call.s3.PutObject', lf)
     check_access_denied(client.put_object, Bucket=bucket_name, Key=key1_str, Body=key1_str)
+
 
 @pytest.mark.encryption
 @pytest.mark.fails_on_dbstore
@@ -11471,13 +12182,13 @@ def test_bucket_policy_put_obj_kms_noenc():
 
     deny_incorrect_algo = {
         "StringNotEquals": {
-          "s3:x-amz-server-side-encryption": "aws:kms"
+            "s3:x-amz-server-side-encryption": "aws:kms"
         }
     }
 
     deny_unencrypted_obj = {
-        "Null" : {
-          "s3:x-amz-server-side-encryption": "true"
+        "Null": {
+            "s3:x-amz-server-side-encryption": "true"
         }
     }
 
@@ -11491,20 +12202,21 @@ def test_bucket_policy_put_obj_kms_noenc():
     # boto3.set_stream_logger(name='botocore')
 
     client.put_bucket_policy(Bucket=bucket_name, Policy=policy_document)
-    key1_str ='testobj'
-    key2_str ='unicorn'
+    key1_str = 'testobj'
+    key2_str = 'unicorn'
 
-    #response = client.get_bucket_policy(Bucket=bucket_name)
-    #print response
+    # response = client.get_bucket_policy(Bucket=bucket_name)
+    # print response
 
     # must do check_access_denied last - otherwise, pending data
     #  breaks next call...
     response = client.put_object(Bucket=bucket_name, Key=key1_str,
-         ServerSideEncryption='aws:kms', SSEKMSKeyId=kms_keyid)
+                                 ServerSideEncryption='aws:kms', SSEKMSKeyId=kms_keyid)
     assert response['ResponseMetadata']['HTTPHeaders']['x-amz-server-side-encryption'] == 'aws:kms'
     assert response['ResponseMetadata']['HTTPHeaders']['x-amz-server-side-encryption-aws-kms-key-id'] == kms_keyid
 
     check_access_denied(client.put_object, Bucket=bucket_name, Key=key2_str, Body=key2_str)
+
 
 @pytest.mark.encryption
 @pytest.mark.bucket_policy
@@ -11514,13 +12226,13 @@ def test_bucket_policy_put_obj_kms_s3():
 
     deny_incorrect_algo = {
         "StringNotEquals": {
-          "s3:x-amz-server-side-encryption": "aws:kms"
+            "s3:x-amz-server-side-encryption": "aws:kms"
         }
     }
 
     deny_unencrypted_obj = {
-        "Null" : {
-          "s3:x-amz-server-side-encryption": "true"
+        "Null": {
+            "s3:x-amz-server-side-encryption": "true"
         }
     }
 
@@ -11534,18 +12246,19 @@ def test_bucket_policy_put_obj_kms_s3():
     # boto3.set_stream_logger(name='botocore')
 
     client.put_bucket_policy(Bucket=bucket_name, Policy=policy_document)
-    key1_str ='testobj'
+    key1_str = 'testobj'
 
-    #response = client.get_bucket_policy(Bucket=bucket_name)
-    #print response
+    # response = client.get_bucket_policy(Bucket=bucket_name)
+    # print response
 
     sse_client_headers = {
-        'x-amz-server-side-encryption' : 'AES256',
+        'x-amz-server-side-encryption': 'AES256',
     }
 
     lf = (lambda **kwargs: kwargs['params']['headers'].update(sse_client_headers))
     client.meta.events.register('before-call.s3.PutObject', lf)
     check_access_denied(client.put_object, Bucket=bucket_name, Key=key1_str, Body=key1_str)
+
 
 @pytest.mark.tagging
 @pytest.mark.bucket_policy
@@ -11556,7 +12269,7 @@ def test_bucket_policy_put_obj_request_obj_tag():
     client = get_client()
 
     tag_conditional = {"StringEquals": {
-        "s3:RequestObjectTag/security" : "public"
+        "s3:RequestObjectTag/security": "public"
     }}
 
     p = Policy()
@@ -11568,14 +12281,15 @@ def test_bucket_policy_put_obj_request_obj_tag():
     client.put_bucket_policy(Bucket=bucket_name, Policy=policy_document)
 
     alt_client = get_alt_client()
-    key1_str ='testobj'
+    key1_str = 'testobj'
     check_access_denied(alt_client.put_object, Bucket=bucket_name, Key=key1_str, Body=key1_str)
 
-    headers = {"x-amz-tagging" : "security=public"}
+    headers = {"x-amz-tagging": "security=public"}
     lf = (lambda **kwargs: kwargs['params']['headers'].update(headers))
     client.meta.events.register('before-call.s3.PutObject', lf)
-    #TODO: why is this a 400 and not passing
+    # TODO: why is this a 400 and not passing
     alt_client.put_object(Bucket=bucket_name, Key=key1_str, Body=key1_str)
+
 
 @pytest.mark.tagging
 @pytest.mark.bucket_policy
@@ -11585,14 +12299,13 @@ def test_bucket_policy_get_obj_acl_existing_tag():
     client = get_client()
 
     tag_conditional = {"StringEquals": {
-        "s3:ExistingObjectTag/security" : "public"
+        "s3:ExistingObjectTag/security": "public"
     }}
 
     resource = _make_arn_resource("{}/{}".format(bucket_name, "*"))
     policy_document = make_json_policy("s3:GetObjectAcl",
                                        resource,
                                        conditions=tag_conditional)
-
 
     client.put_bucket_policy(Bucket=bucket_name, Policy=policy_document)
     tagset = []
@@ -11643,11 +12356,11 @@ def test_object_lock_put_obj_lock():
     bucket_name = get_new_bucket_name()
     client = get_client()
     client.create_bucket(Bucket=bucket_name, ObjectLockEnabledForBucket=True)
-    conf = {'ObjectLockEnabled':'Enabled',
+    conf = {'ObjectLockEnabled': 'Enabled',
             'Rule': {
-                'DefaultRetention':{
-                    'Mode':'GOVERNANCE',
-                    'Days':1
+                'DefaultRetention': {
+                    'Mode': 'GOVERNANCE',
+                    'Days': 1
                 }
             }}
     response = client.put_object_lock_configuration(
@@ -11655,11 +12368,11 @@ def test_object_lock_put_obj_lock():
         ObjectLockConfiguration=conf)
     assert response['ResponseMetadata']['HTTPStatusCode'] == 200
 
-    conf = {'ObjectLockEnabled':'Enabled',
+    conf = {'ObjectLockEnabled': 'Enabled',
             'Rule': {
-                'DefaultRetention':{
-                    'Mode':'COMPLIANCE',
-                    'Years':1
+                'DefaultRetention': {
+                    'Mode': 'COMPLIANCE',
+                    'Years': 1
                 }
             }}
     response = client.put_object_lock_configuration(
@@ -11675,14 +12388,15 @@ def test_object_lock_put_obj_lock_invalid_bucket():
     bucket_name = get_new_bucket_name()
     client = get_client()
     client.create_bucket(Bucket=bucket_name)
-    conf = {'ObjectLockEnabled':'Enabled',
+    conf = {'ObjectLockEnabled': 'Enabled',
             'Rule': {
-                'DefaultRetention':{
-                    'Mode':'GOVERNANCE',
-                    'Days':1
+                'DefaultRetention': {
+                    'Mode': 'GOVERNANCE',
+                    'Days': 1
                 }
             }}
-    e = assert_raises(ClientError, client.put_object_lock_configuration, Bucket=bucket_name, ObjectLockConfiguration=conf)
+    e = assert_raises(ClientError, client.put_object_lock_configuration, Bucket=bucket_name,
+                      ObjectLockConfiguration=conf)
     status, error_code = _get_status_and_error_code(e.response)
     assert status == 409
     assert error_code == 'InvalidBucketState'
@@ -11693,15 +12407,16 @@ def test_object_lock_put_obj_lock_with_days_and_years():
     bucket_name = get_new_bucket_name()
     client = get_client()
     client.create_bucket(Bucket=bucket_name, ObjectLockEnabledForBucket=True)
-    conf = {'ObjectLockEnabled':'Enabled',
+    conf = {'ObjectLockEnabled': 'Enabled',
             'Rule': {
-                'DefaultRetention':{
-                    'Mode':'GOVERNANCE',
-                    'Days':1,
-                    'Years':1
+                'DefaultRetention': {
+                    'Mode': 'GOVERNANCE',
+                    'Days': 1,
+                    'Years': 1
                 }
             }}
-    e = assert_raises(ClientError, client.put_object_lock_configuration, Bucket=bucket_name, ObjectLockConfiguration=conf)
+    e = assert_raises(ClientError, client.put_object_lock_configuration, Bucket=bucket_name,
+                      ObjectLockConfiguration=conf)
     status, error_code = _get_status_and_error_code(e.response)
     assert status == 400
     assert error_code == 'MalformedXML'
@@ -11712,14 +12427,15 @@ def test_object_lock_put_obj_lock_invalid_days():
     bucket_name = get_new_bucket_name()
     client = get_client()
     client.create_bucket(Bucket=bucket_name, ObjectLockEnabledForBucket=True)
-    conf = {'ObjectLockEnabled':'Enabled',
+    conf = {'ObjectLockEnabled': 'Enabled',
             'Rule': {
-                'DefaultRetention':{
-                    'Mode':'GOVERNANCE',
-                    'Days':0
+                'DefaultRetention': {
+                    'Mode': 'GOVERNANCE',
+                    'Days': 0
                 }
             }}
-    e = assert_raises(ClientError, client.put_object_lock_configuration, Bucket=bucket_name, ObjectLockConfiguration=conf)
+    e = assert_raises(ClientError, client.put_object_lock_configuration, Bucket=bucket_name,
+                      ObjectLockConfiguration=conf)
     status, error_code = _get_status_and_error_code(e.response)
     assert status == 400
     assert error_code == 'InvalidRetentionPeriod'
@@ -11730,14 +12446,15 @@ def test_object_lock_put_obj_lock_invalid_years():
     bucket_name = get_new_bucket_name()
     client = get_client()
     client.create_bucket(Bucket=bucket_name, ObjectLockEnabledForBucket=True)
-    conf = {'ObjectLockEnabled':'Enabled',
+    conf = {'ObjectLockEnabled': 'Enabled',
             'Rule': {
-                'DefaultRetention':{
-                    'Mode':'GOVERNANCE',
-                    'Years':-1
+                'DefaultRetention': {
+                    'Mode': 'GOVERNANCE',
+                    'Years': -1
                 }
             }}
-    e = assert_raises(ClientError, client.put_object_lock_configuration, Bucket=bucket_name, ObjectLockConfiguration=conf)
+    e = assert_raises(ClientError, client.put_object_lock_configuration, Bucket=bucket_name,
+                      ObjectLockConfiguration=conf)
     status, error_code = _get_status_and_error_code(e.response)
     assert status == 400
     assert error_code == 'InvalidRetentionPeriod'
@@ -11748,26 +12465,28 @@ def test_object_lock_put_obj_lock_invalid_mode():
     bucket_name = get_new_bucket_name()
     client = get_client()
     client.create_bucket(Bucket=bucket_name, ObjectLockEnabledForBucket=True)
-    conf = {'ObjectLockEnabled':'Enabled',
+    conf = {'ObjectLockEnabled': 'Enabled',
             'Rule': {
-                'DefaultRetention':{
-                    'Mode':'abc',
-                    'Years':1
+                'DefaultRetention': {
+                    'Mode': 'abc',
+                    'Years': 1
                 }
             }}
-    e = assert_raises(ClientError, client.put_object_lock_configuration, Bucket=bucket_name, ObjectLockConfiguration=conf)
+    e = assert_raises(ClientError, client.put_object_lock_configuration, Bucket=bucket_name,
+                      ObjectLockConfiguration=conf)
     status, error_code = _get_status_and_error_code(e.response)
     assert status == 400
     assert error_code == 'MalformedXML'
 
-    conf = {'ObjectLockEnabled':'Enabled',
+    conf = {'ObjectLockEnabled': 'Enabled',
             'Rule': {
-                'DefaultRetention':{
-                    'Mode':'governance',
-                    'Years':1
+                'DefaultRetention': {
+                    'Mode': 'governance',
+                    'Years': 1
                 }
             }}
-    e = assert_raises(ClientError, client.put_object_lock_configuration, Bucket=bucket_name, ObjectLockConfiguration=conf)
+    e = assert_raises(ClientError, client.put_object_lock_configuration, Bucket=bucket_name,
+                      ObjectLockConfiguration=conf)
     status, error_code = _get_status_and_error_code(e.response)
     assert status == 400
     assert error_code == 'MalformedXML'
@@ -11778,25 +12497,27 @@ def test_object_lock_put_obj_lock_invalid_status():
     bucket_name = get_new_bucket_name()
     client = get_client()
     client.create_bucket(Bucket=bucket_name, ObjectLockEnabledForBucket=True)
-    conf = {'ObjectLockEnabled':'Disabled',
+    conf = {'ObjectLockEnabled': 'Disabled',
             'Rule': {
-                'DefaultRetention':{
-                    'Mode':'GOVERNANCE',
-                    'Years':1
+                'DefaultRetention': {
+                    'Mode': 'GOVERNANCE',
+                    'Years': 1
                 }
             }}
-    e = assert_raises(ClientError, client.put_object_lock_configuration, Bucket=bucket_name, ObjectLockConfiguration=conf)
+    e = assert_raises(ClientError, client.put_object_lock_configuration, Bucket=bucket_name,
+                      ObjectLockConfiguration=conf)
     status, error_code = _get_status_and_error_code(e.response)
     assert status == 400
     assert error_code == 'MalformedXML'
 
-
+@pytest.mark.versioning
 @pytest.mark.fails_on_dbstore
 def test_object_lock_suspend_versioning():
     bucket_name = get_new_bucket_name()
     client = get_client()
     client.create_bucket(Bucket=bucket_name, ObjectLockEnabledForBucket=True)
-    e = assert_raises(ClientError, client.put_bucket_versioning, Bucket=bucket_name, VersioningConfiguration={'Status': 'Suspended'})
+    e = assert_raises(ClientError, client.put_bucket_versioning, Bucket=bucket_name,
+                      VersioningConfiguration={'Status': 'Suspended'})
     status, error_code = _get_status_and_error_code(e.response)
     assert status == 409
     assert error_code == 'InvalidBucketState'
@@ -11807,11 +12528,11 @@ def test_object_lock_get_obj_lock():
     bucket_name = get_new_bucket_name()
     client = get_client()
     client.create_bucket(Bucket=bucket_name, ObjectLockEnabledForBucket=True)
-    conf = {'ObjectLockEnabled':'Enabled',
+    conf = {'ObjectLockEnabled': 'Enabled',
             'Rule': {
-                'DefaultRetention':{
-                    'Mode':'GOVERNANCE',
-                    'Days':1
+                'DefaultRetention': {
+                    'Mode': 'GOVERNANCE',
+                    'Days': 1
                 }
             }}
     client.put_object_lock_configuration(
@@ -11839,13 +12560,12 @@ def test_object_lock_put_obj_retention():
     key = 'file1'
     response = client.put_object(Bucket=bucket_name, Body='abc', Key=key)
     version_id = response['VersionId']
-    retention = {'Mode':'GOVERNANCE', 'RetainUntilDate':datetime.datetime(2140,1,1,tzinfo=pytz.UTC)}
+    retention = {'Mode': 'GOVERNANCE', 'RetainUntilDate': datetime.datetime(2140, 1, 1, tzinfo=pytz.UTC)}
     response = client.put_object_retention(Bucket=bucket_name, Key=key, Retention=retention)
     assert response['ResponseMetadata']['HTTPStatusCode'] == 200
     response = client.get_object_retention(Bucket=bucket_name, Key=key)
     assert response['Retention'] == retention
     client.delete_object(Bucket=bucket_name, Key=key, VersionId=version_id, BypassGovernanceRetention=True)
-
 
 
 def test_object_lock_put_obj_retention_invalid_bucket():
@@ -11854,7 +12574,7 @@ def test_object_lock_put_obj_retention_invalid_bucket():
     client.create_bucket(Bucket=bucket_name)
     key = 'file1'
     client.put_object(Bucket=bucket_name, Body='abc', Key=key)
-    retention = {'Mode':'GOVERNANCE', 'RetainUntilDate':datetime.datetime(2030,1,1,tzinfo=pytz.UTC)}
+    retention = {'Mode': 'GOVERNANCE', 'RetainUntilDate': datetime.datetime(2030, 1, 1, tzinfo=pytz.UTC)}
     e = assert_raises(ClientError, client.put_object_retention, Bucket=bucket_name, Key=key, Retention=retention)
     status, error_code = _get_status_and_error_code(e.response)
     assert status == 400
@@ -11868,13 +12588,13 @@ def test_object_lock_put_obj_retention_invalid_mode():
     client.create_bucket(Bucket=bucket_name, ObjectLockEnabledForBucket=True)
     key = 'file1'
     client.put_object(Bucket=bucket_name, Body='abc', Key=key)
-    retention = {'Mode':'governance', 'RetainUntilDate':datetime.datetime(2030,1,1,tzinfo=pytz.UTC)}
+    retention = {'Mode': 'governance', 'RetainUntilDate': datetime.datetime(2030, 1, 1, tzinfo=pytz.UTC)}
     e = assert_raises(ClientError, client.put_object_retention, Bucket=bucket_name, Key=key, Retention=retention)
     status, error_code = _get_status_and_error_code(e.response)
     assert status == 400
     assert error_code == 'MalformedXML'
 
-    retention = {'Mode':'abc', 'RetainUntilDate':datetime.datetime(2030,1,1,tzinfo=pytz.UTC)}
+    retention = {'Mode': 'abc', 'RetainUntilDate': datetime.datetime(2030, 1, 1, tzinfo=pytz.UTC)}
     e = assert_raises(ClientError, client.put_object_retention, Bucket=bucket_name, Key=key, Retention=retention)
     status, error_code = _get_status_and_error_code(e.response)
     assert status == 400
@@ -11889,7 +12609,7 @@ def test_object_lock_get_obj_retention():
     key = 'file1'
     response = client.put_object(Bucket=bucket_name, Body='abc', Key=key)
     version_id = response['VersionId']
-    retention = {'Mode':'GOVERNANCE', 'RetainUntilDate':datetime.datetime(2030,1,1,tzinfo=pytz.UTC)}
+    retention = {'Mode': 'GOVERNANCE', 'RetainUntilDate': datetime.datetime(2030, 1, 1, tzinfo=pytz.UTC)}
     client.put_object_retention(Bucket=bucket_name, Key=key, Retention=retention)
     response = client.get_object_retention(Bucket=bucket_name, Key=key)
     assert response['Retention'] == retention
@@ -11905,10 +12625,10 @@ def test_object_lock_get_obj_retention_iso8601():
     response = client.put_object(Bucket=bucket_name, Body='abc', Key=key)
     version_id = response['VersionId']
     date = datetime.datetime.today() + datetime.timedelta(days=365)
-    retention = {'Mode':'GOVERNANCE', 'RetainUntilDate': date}
+    retention = {'Mode': 'GOVERNANCE', 'RetainUntilDate': date}
     client.put_object_retention(Bucket=bucket_name, Key=key, Retention=retention)
     client.meta.events.register('after-call.s3.HeadObject', get_http_response)
-    client.head_object(Bucket=bucket_name,VersionId=version_id,Key=key)
+    client.head_object(Bucket=bucket_name, VersionId=version_id, Key=key)
     retain_date = http_response['headers']['x-amz-object-lock-retain-until-date']
     isodate.parse_datetime(retain_date)
     client.delete_object(Bucket=bucket_name, Key=key, VersionId=version_id, BypassGovernanceRetention=True)
@@ -11925,7 +12645,7 @@ def test_object_lock_get_obj_retention_invalid_bucket():
     assert status == 400
     assert error_code == 'InvalidRequest'
 
-
+@pytest.mark.versioning
 @pytest.mark.fails_on_dbstore
 def test_object_lock_put_obj_retention_versionid():
     bucket_name = get_new_bucket_name()
@@ -11935,9 +12655,10 @@ def test_object_lock_put_obj_retention_versionid():
     client.put_object(Bucket=bucket_name, Body='abc', Key=key)
     response = client.put_object(Bucket=bucket_name, Body='abc', Key=key)
     version_id = response['VersionId']
-    retention = {'Mode':'GOVERNANCE', 'RetainUntilDate':datetime.datetime(2030,1,1,tzinfo=pytz.UTC)}
+    retention = {'Mode': 'GOVERNANCE', 'RetainUntilDate': datetime.datetime(2030, 1, 1, tzinfo=pytz.UTC)}
     client.put_object_retention(Bucket=bucket_name, Key=key, VersionId=version_id, Retention=retention)
     response = client.get_object_retention(Bucket=bucket_name, Key=key, VersionId=version_id)
+    assert response
     assert response['Retention'] == retention
     client.delete_object(Bucket=bucket_name, Key=key, VersionId=version_id, BypassGovernanceRetention=True)
 
@@ -11947,11 +12668,11 @@ def test_object_lock_put_obj_retention_override_default_retention():
     bucket_name = get_new_bucket_name()
     client = get_client()
     client.create_bucket(Bucket=bucket_name, ObjectLockEnabledForBucket=True)
-    conf = {'ObjectLockEnabled':'Enabled',
+    conf = {'ObjectLockEnabled': 'Enabled',
             'Rule': {
-                'DefaultRetention':{
-                    'Mode':'GOVERNANCE',
-                    'Days':1
+                'DefaultRetention': {
+                    'Mode': 'GOVERNANCE',
+                    'Days': 1
                 }
             }}
     client.put_object_lock_configuration(
@@ -11960,7 +12681,7 @@ def test_object_lock_put_obj_retention_override_default_retention():
     key = 'file1'
     response = client.put_object(Bucket=bucket_name, Body='abc', Key=key)
     version_id = response['VersionId']
-    retention = {'Mode':'GOVERNANCE', 'RetainUntilDate':datetime.datetime(2030,1,1,tzinfo=pytz.UTC)}
+    retention = {'Mode': 'GOVERNANCE', 'RetainUntilDate': datetime.datetime(2030, 1, 1, tzinfo=pytz.UTC)}
     client.put_object_retention(Bucket=bucket_name, Key=key, Retention=retention)
     response = client.get_object_retention(Bucket=bucket_name, Key=key)
     assert response['Retention'] == retention
@@ -11975,9 +12696,9 @@ def test_object_lock_put_obj_retention_increase_period():
     key = 'file1'
     response = client.put_object(Bucket=bucket_name, Body='abc', Key=key)
     version_id = response['VersionId']
-    retention1 = {'Mode':'GOVERNANCE', 'RetainUntilDate':datetime.datetime(2030,1,1,tzinfo=pytz.UTC)}
+    retention1 = {'Mode': 'GOVERNANCE', 'RetainUntilDate': datetime.datetime(2030, 1, 1, tzinfo=pytz.UTC)}
     client.put_object_retention(Bucket=bucket_name, Key=key, Retention=retention1)
-    retention2 = {'Mode':'GOVERNANCE', 'RetainUntilDate':datetime.datetime(2030,1,3,tzinfo=pytz.UTC)}
+    retention2 = {'Mode': 'GOVERNANCE', 'RetainUntilDate': datetime.datetime(2030, 1, 3, tzinfo=pytz.UTC)}
     client.put_object_retention(Bucket=bucket_name, Key=key, Retention=retention2)
     response = client.get_object_retention(Bucket=bucket_name, Key=key)
     assert response['Retention'] == retention2
@@ -11992,9 +12713,9 @@ def test_object_lock_put_obj_retention_shorten_period():
     key = 'file1'
     response = client.put_object(Bucket=bucket_name, Body='abc', Key=key)
     version_id = response['VersionId']
-    retention = {'Mode':'GOVERNANCE', 'RetainUntilDate':datetime.datetime(2030,1,3,tzinfo=pytz.UTC)}
+    retention = {'Mode': 'GOVERNANCE', 'RetainUntilDate': datetime.datetime(2030, 1, 3, tzinfo=pytz.UTC)}
     client.put_object_retention(Bucket=bucket_name, Key=key, Retention=retention)
-    retention = {'Mode':'GOVERNANCE', 'RetainUntilDate':datetime.datetime(2030,1,1,tzinfo=pytz.UTC)}
+    retention = {'Mode': 'GOVERNANCE', 'RetainUntilDate': datetime.datetime(2030, 1, 1, tzinfo=pytz.UTC)}
     e = assert_raises(ClientError, client.put_object_retention, Bucket=bucket_name, Key=key, Retention=retention)
     status, error_code = _get_status_and_error_code(e.response)
     assert status == 403
@@ -12010,9 +12731,9 @@ def test_object_lock_put_obj_retention_shorten_period_bypass():
     key = 'file1'
     response = client.put_object(Bucket=bucket_name, Body='abc', Key=key)
     version_id = response['VersionId']
-    retention = {'Mode':'GOVERNANCE', 'RetainUntilDate':datetime.datetime(2030,1,3,tzinfo=pytz.UTC)}
+    retention = {'Mode': 'GOVERNANCE', 'RetainUntilDate': datetime.datetime(2030, 1, 3, tzinfo=pytz.UTC)}
     client.put_object_retention(Bucket=bucket_name, Key=key, Retention=retention)
-    retention = {'Mode':'GOVERNANCE', 'RetainUntilDate':datetime.datetime(2030,1,1,tzinfo=pytz.UTC)}
+    retention = {'Mode': 'GOVERNANCE', 'RetainUntilDate': datetime.datetime(2030, 1, 1, tzinfo=pytz.UTC)}
     client.put_object_retention(Bucket=bucket_name, Key=key, Retention=retention, BypassGovernanceRetention=True)
     response = client.get_object_retention(Bucket=bucket_name, Key=key)
     assert response['Retention'] == retention
@@ -12027,15 +12748,17 @@ def test_object_lock_delete_object_with_retention():
     key = 'file1'
 
     response = client.put_object(Bucket=bucket_name, Body='abc', Key=key)
-    retention = {'Mode':'GOVERNANCE', 'RetainUntilDate':datetime.datetime(2030,1,1,tzinfo=pytz.UTC)}
+    retention = {'Mode': 'GOVERNANCE', 'RetainUntilDate': datetime.datetime(2030, 1, 1, tzinfo=pytz.UTC)}
     client.put_object_retention(Bucket=bucket_name, Key=key, Retention=retention)
     e = assert_raises(ClientError, client.delete_object, Bucket=bucket_name, Key=key, VersionId=response['VersionId'])
     status, error_code = _get_status_and_error_code(e.response)
     assert status == 403
     assert error_code == 'AccessDenied'
 
-    response = client.delete_object(Bucket=bucket_name, Key=key, VersionId=response['VersionId'], BypassGovernanceRetention=True)
+    response = client.delete_object(Bucket=bucket_name, Key=key, VersionId=response['VersionId'],
+                                    BypassGovernanceRetention=True)
     assert response['ResponseMetadata']['HTTPStatusCode'] == 204
+
 
 @pytest.mark.fails_on_dbstore
 def test_object_lock_delete_object_with_retention_and_marker():
@@ -12045,7 +12768,7 @@ def test_object_lock_delete_object_with_retention_and_marker():
     key = 'file1'
 
     response = client.put_object(Bucket=bucket_name, Body='abc', Key=key)
-    retention = {'Mode':'GOVERNANCE', 'RetainUntilDate':datetime.datetime(2030,1,1,tzinfo=pytz.UTC)}
+    retention = {'Mode': 'GOVERNANCE', 'RetainUntilDate': datetime.datetime(2030, 1, 1, tzinfo=pytz.UTC)}
     client.put_object_retention(Bucket=bucket_name, Key=key, Retention=retention)
     del_response = client.delete_object(Bucket=bucket_name, Key=key)
     e = assert_raises(ClientError, client.delete_object, Bucket=bucket_name, Key=key, VersionId=response['VersionId'])
@@ -12059,8 +12782,10 @@ def test_object_lock_delete_object_with_retention_and_marker():
     assert status == 403
     assert error_code == 'AccessDenied'
 
-    response = client.delete_object(Bucket=bucket_name, Key=key, VersionId=response['VersionId'], BypassGovernanceRetention=True)
+    response = client.delete_object(Bucket=bucket_name, Key=key, VersionId=response['VersionId'],
+                                    BypassGovernanceRetention=True)
     assert response['ResponseMetadata']['HTTPStatusCode'] == 204
+
 
 @pytest.mark.fails_on_dbstore
 def test_object_lock_multi_delete_object_with_retention():
@@ -12077,7 +12802,7 @@ def test_object_lock_multi_delete_object_with_retention():
     versionId2 = response2['VersionId']
 
     # key1 is under retention, but key2 isn't.
-    retention = {'Mode':'GOVERNANCE', 'RetainUntilDate':datetime.datetime(2030,1,1,tzinfo=pytz.UTC)}
+    retention = {'Mode': 'GOVERNANCE', 'RetainUntilDate': datetime.datetime(2030, 1, 1, tzinfo=pytz.UTC)}
     client.put_object_retention(Bucket=bucket_name, Key=key1, Retention=retention)
 
     delete_response = client.delete_objects(
@@ -12098,7 +12823,7 @@ def test_object_lock_multi_delete_object_with_retention():
 
     assert len(delete_response['Deleted']) == 1
     assert len(delete_response['Errors']) == 1
-    
+
     failed_object = delete_response['Errors'][0]
     assert failed_object['Code'] == 'AccessDenied'
     assert failed_object['Key'] == key1
@@ -12121,12 +12846,11 @@ def test_object_lock_multi_delete_object_with_retention():
         BypassGovernanceRetention=True
     )
 
-    assert( ('Errors' not in delete_response) or (len(delete_response['Errors']) == 0) )
+    assert (('Errors' not in delete_response) or (len(delete_response['Errors']) == 0))
     assert len(delete_response['Deleted']) == 1
     deleted_object = delete_response['Deleted'][0]
     assert deleted_object['Key'] == key1
     assert deleted_object['VersionId'] == versionId1
-
 
 
 @pytest.mark.fails_on_dbstore
@@ -12139,7 +12863,7 @@ def test_object_lock_put_legal_hold():
     legal_hold = {'Status': 'ON'}
     response = client.put_object_legal_hold(Bucket=bucket_name, Key=key, LegalHold=legal_hold)
     assert response['ResponseMetadata']['HTTPStatusCode'] == 200
-    response = client.put_object_legal_hold(Bucket=bucket_name, Key=key, LegalHold={'Status':'OFF'})
+    response = client.put_object_legal_hold(Bucket=bucket_name, Key=key, LegalHold={'Status': 'OFF'})
     assert response['ResponseMetadata']['HTTPStatusCode'] == 200
 
 
@@ -12211,7 +12935,7 @@ def test_object_lock_delete_object_with_legal_hold_on():
     status, error_code = _get_status_and_error_code(e.response)
     assert status == 403
     assert error_code == 'AccessDenied'
-    client.put_object_legal_hold(Bucket=bucket_name, Key=key, LegalHold={'Status':'OFF'})
+    client.put_object_legal_hold(Bucket=bucket_name, Key=key, LegalHold={'Status': 'OFF'})
 
 
 @pytest.mark.fails_on_dbstore
@@ -12235,14 +12959,14 @@ def test_object_lock_get_obj_metadata():
     client.put_object(Bucket=bucket_name, Body='abc', Key=key)
     legal_hold = {'Status': 'ON'}
     client.put_object_legal_hold(Bucket=bucket_name, Key=key, LegalHold=legal_hold)
-    retention = {'Mode':'GOVERNANCE', 'RetainUntilDate':datetime.datetime(2030,1,1,tzinfo=pytz.UTC)}
+    retention = {'Mode': 'GOVERNANCE', 'RetainUntilDate': datetime.datetime(2030, 1, 1, tzinfo=pytz.UTC)}
     client.put_object_retention(Bucket=bucket_name, Key=key, Retention=retention)
     response = client.head_object(Bucket=bucket_name, Key=key)
     assert response['ObjectLockMode'] == retention['Mode']
     assert response['ObjectLockRetainUntilDate'] == retention['RetainUntilDate']
     assert response['ObjectLockLegalHoldStatus'] == legal_hold['Status']
 
-    client.put_object_legal_hold(Bucket=bucket_name, Key=key, LegalHold={'Status':'OFF'})
+    client.put_object_legal_hold(Bucket=bucket_name, Key=key, LegalHold={'Status': 'OFF'})
     client.delete_object(Bucket=bucket_name, Key=key, VersionId=response['VersionId'], BypassGovernanceRetention=True)
 
 
@@ -12253,14 +12977,16 @@ def test_object_lock_uploading_obj():
     client.create_bucket(Bucket=bucket_name, ObjectLockEnabledForBucket=True)
     key = 'file1'
     client.put_object(Bucket=bucket_name, Body='abc', Key=key, ObjectLockMode='GOVERNANCE',
-                      ObjectLockRetainUntilDate=datetime.datetime(2030,1,1,tzinfo=pytz.UTC), ObjectLockLegalHoldStatus='ON')
+                      ObjectLockRetainUntilDate=datetime.datetime(2030, 1, 1, tzinfo=pytz.UTC),
+                      ObjectLockLegalHoldStatus='ON')
 
     response = client.head_object(Bucket=bucket_name, Key=key)
     assert response['ObjectLockMode'] == 'GOVERNANCE'
-    assert response['ObjectLockRetainUntilDate'] == datetime.datetime(2030,1,1,tzinfo=pytz.UTC)
+    assert response['ObjectLockRetainUntilDate'] == datetime.datetime(2030, 1, 1, tzinfo=pytz.UTC)
     assert response['ObjectLockLegalHoldStatus'] == 'ON'
-    client.put_object_legal_hold(Bucket=bucket_name, Key=key, LegalHold={'Status':'OFF'})
+    client.put_object_legal_hold(Bucket=bucket_name, Key=key, LegalHold={'Status': 'OFF'})
     client.delete_object(Bucket=bucket_name, Key=key, VersionId=response['VersionId'], BypassGovernanceRetention=True)
+
 
 @pytest.mark.fails_on_dbstore
 def test_object_lock_changing_mode_from_governance_with_bypass():
@@ -12273,8 +12999,9 @@ def test_object_lock_changing_mode_from_governance_with_bypass():
     client.put_object(Bucket=bucket_name, Body='abc', Key=key, ObjectLockMode='GOVERNANCE',
                       ObjectLockRetainUntilDate=retain_until)
     # change mode to COMPLIANCE
-    retention = {'Mode':'COMPLIANCE', 'RetainUntilDate':retain_until}
+    retention = {'Mode': 'COMPLIANCE', 'RetainUntilDate': retain_until}
     client.put_object_retention(Bucket=bucket_name, Key=key, Retention=retention, BypassGovernanceRetention=True)
+
 
 @pytest.mark.fails_on_dbstore
 def test_object_lock_changing_mode_from_governance_without_bypass():
@@ -12287,11 +13014,12 @@ def test_object_lock_changing_mode_from_governance_without_bypass():
     client.put_object(Bucket=bucket_name, Body='abc', Key=key, ObjectLockMode='GOVERNANCE',
                       ObjectLockRetainUntilDate=retain_until)
     # try to change mode to COMPLIANCE
-    retention = {'Mode':'COMPLIANCE', 'RetainUntilDate':retain_until}
+    retention = {'Mode': 'COMPLIANCE', 'RetainUntilDate': retain_until}
     e = assert_raises(ClientError, client.put_object_retention, Bucket=bucket_name, Key=key, Retention=retention)
     status, error_code = _get_status_and_error_code(e.response)
     assert status == 403
     assert error_code == 'AccessDenied'
+
 
 @pytest.mark.fails_on_dbstore
 def test_object_lock_changing_mode_from_compliance():
@@ -12304,11 +13032,12 @@ def test_object_lock_changing_mode_from_compliance():
     client.put_object(Bucket=bucket_name, Body='abc', Key=key, ObjectLockMode='COMPLIANCE',
                       ObjectLockRetainUntilDate=retain_until)
     # try to change mode to GOVERNANCE
-    retention = {'Mode':'GOVERNANCE', 'RetainUntilDate':retain_until}
+    retention = {'Mode': 'GOVERNANCE', 'RetainUntilDate': retain_until}
     e = assert_raises(ClientError, client.put_object_retention, Bucket=bucket_name, Key=key, Retention=retention)
     status, error_code = _get_status_and_error_code(e.response)
     assert status == 403
     assert error_code == 'AccessDenied'
+
 
 @pytest.mark.fails_on_dbstore
 def test_copy_object_ifmatch_good():
@@ -12316,10 +13045,11 @@ def test_copy_object_ifmatch_good():
     client = get_client()
     resp = client.put_object(Bucket=bucket_name, Key='foo', Body='bar')
 
-    client.copy_object(Bucket=bucket_name, CopySource=bucket_name+'/foo', CopySourceIfMatch=resp['ETag'], Key='bar')
+    client.copy_object(Bucket=bucket_name, CopySource=bucket_name + '/foo', CopySourceIfMatch=resp['ETag'], Key='bar')
     response = client.get_object(Bucket=bucket_name, Key='bar')
     body = _get_body(response)
     assert body == 'bar'
+
 
 # TODO: remove fails_on_rgw when https://tracker.ceph.com/issues/40808 is resolved
 @pytest.mark.fails_on_rgw
@@ -12328,10 +13058,12 @@ def test_copy_object_ifmatch_failed():
     client = get_client()
     client.put_object(Bucket=bucket_name, Key='foo', Body='bar')
 
-    e = assert_raises(ClientError, client.copy_object, Bucket=bucket_name, CopySource=bucket_name+'/foo', CopySourceIfMatch='ABCORZ', Key='bar')
+    e = assert_raises(ClientError, client.copy_object, Bucket=bucket_name, CopySource=bucket_name + '/foo',
+                      CopySourceIfMatch='ABCORZ', Key='bar')
     status, error_code = _get_status_and_error_code(e.response)
     assert status == 412
     assert error_code == 'PreconditionFailed'
+
 
 # TODO: remove fails_on_rgw when https://tracker.ceph.com/issues/40808 is resolved
 @pytest.mark.fails_on_rgw
@@ -12340,10 +13072,12 @@ def test_copy_object_ifnonematch_good():
     client = get_client()
     resp = client.put_object(Bucket=bucket_name, Key='foo', Body='bar')
 
-    e = assert_raises(ClientError, client.copy_object, Bucket=bucket_name, CopySource=bucket_name+'/foo', CopySourceIfNoneMatch=resp['ETag'], Key='bar')
+    e = assert_raises(ClientError, client.copy_object, Bucket=bucket_name, CopySource=bucket_name + '/foo',
+                      CopySourceIfNoneMatch=resp['ETag'], Key='bar')
     status, error_code = _get_status_and_error_code(e.response)
     assert status == 412
     assert error_code == 'PreconditionFailed'
+
 
 @pytest.mark.fails_on_dbstore
 def test_copy_object_ifnonematch_failed():
@@ -12351,10 +13085,11 @@ def test_copy_object_ifnonematch_failed():
     client = get_client()
     resp = client.put_object(Bucket=bucket_name, Key='foo', Body='bar')
 
-    client.copy_object(Bucket=bucket_name, CopySource=bucket_name+'/foo', CopySourceIfNoneMatch='ABCORZ', Key='bar')
+    client.copy_object(Bucket=bucket_name, CopySource=bucket_name + '/foo', CopySourceIfNoneMatch='ABCORZ', Key='bar')
     response = client.get_object(Bucket=bucket_name, Key='bar')
     body = _get_body(response)
     assert body == 'bar'
+
 
 # TODO: results in a 404 instead of 400 on the RGW
 @pytest.mark.fails_on_rgw
@@ -12366,11 +13101,13 @@ def test_object_read_unreadable():
     assert status == 400
     assert e.response['Error']['Message'] == 'Couldn\'t parse the specified URI.'
 
+
 def test_get_bucket_policy_status():
     bucket_name = get_new_bucket()
     client = get_client()
     resp = client.get_bucket_policy_status(Bucket=bucket_name)
     assert resp['PolicyStatus']['IsPublic'] == False
+
 
 def test_get_public_acl_bucket_policy_status():
     bucket_name = get_new_bucket()
@@ -12378,6 +13115,7 @@ def test_get_public_acl_bucket_policy_status():
     client.put_bucket_acl(Bucket=bucket_name, ACL='public-read')
     resp = client.get_bucket_policy_status(Bucket=bucket_name)
     assert resp['PolicyStatus']['IsPublic'] == True
+
 
 def test_get_authpublic_acl_bucket_policy_status():
     bucket_name = get_new_bucket()
@@ -12397,18 +13135,18 @@ def test_get_publicpolicy_acl_bucket_policy_status():
     resource1 = "arn:aws:s3:::" + bucket_name
     resource2 = "arn:aws:s3:::" + bucket_name + "/*"
     policy_document = json.dumps(
-    {
-        "Version": "2012-10-17",
-        "Statement": [{
-        "Effect": "Allow",
-        "Principal": {"AWS": "*"},
-        "Action": "s3:ListBucket",
-        "Resource": [
-            "{}".format(resource1),
-            "{}".format(resource2)
-          ]
-        }]
-     })
+        {
+            "Version": "2012-10-17",
+            "Statement": [{
+                "Effect": "Allow",
+                "Principal": {"AWS": "*"},
+                "Action": "s3:ListBucket",
+                "Resource": [
+                    "{}".format(resource1),
+                    "{}".format(resource2)
+                ]
+            }]
+        })
 
     client.put_bucket_policy(Bucket=bucket_name, Policy=policy_document)
     resp = client.get_bucket_policy_status(Bucket=bucket_name)
@@ -12425,22 +13163,22 @@ def test_get_nonpublicpolicy_acl_bucket_policy_status():
     resource1 = "arn:aws:s3:::" + bucket_name
     resource2 = "arn:aws:s3:::" + bucket_name + "/*"
     policy_document = json.dumps(
-    {
-        "Version": "2012-10-17",
-        "Statement": [{
-        "Effect": "Allow",
-        "Principal": {"AWS": "*"},
-        "Action": "s3:ListBucket",
-        "Resource": [
-            "{}".format(resource1),
-            "{}".format(resource2)
-          ],
-        "Condition": {
-            "IpAddress":
-            {"aws:SourceIp": "10.0.0.0/32"}
-        }
-        }]
-     })
+        {
+            "Version": "2012-10-17",
+            "Statement": [{
+                "Effect": "Allow",
+                "Principal": {"AWS": "*"},
+                "Action": "s3:ListBucket",
+                "Resource": [
+                    "{}".format(resource1),
+                    "{}".format(resource2)
+                ],
+                "Condition": {
+                    "IpAddress":
+                        {"aws:SourceIp": "10.0.0.0/32"}
+                }
+            }]
+        })
 
     client.put_bucket_policy(Bucket=bucket_name, Policy=policy_document)
     resp = client.get_bucket_policy_status(Bucket=bucket_name)
@@ -12457,25 +13195,26 @@ def test_get_nonpublicpolicy_deny_bucket_policy_status():
     resource1 = "arn:aws:s3:::" + bucket_name
     resource2 = "arn:aws:s3:::" + bucket_name + "/*"
     policy_document = json.dumps(
-    {
-        "Version": "2012-10-17",
-        "Statement": [{
-        "Effect": "Allow",
-        "NotPrincipal": {"AWS": "arn:aws:iam::s3tenant1:root"},
-        "Action": "s3:ListBucket",
-        "Resource": [
-            "{}".format(resource1),
-            "{}".format(resource2)
-          ],
-        }]
-     })
+        {
+            "Version": "2012-10-17",
+            "Statement": [{
+                "Effect": "Allow",
+                "NotPrincipal": {"AWS": "arn:aws:iam::s3tenant1:root"},
+                "Action": "s3:ListBucket",
+                "Resource": [
+                    "{}".format(resource1),
+                    "{}".format(resource2)
+                ],
+            }]
+        })
 
     client.put_bucket_policy(Bucket=bucket_name, Policy=policy_document)
     resp = client.get_bucket_policy_status(Bucket=bucket_name)
     assert resp['PolicyStatus']['IsPublic'] == True
 
+
 def test_get_default_public_block():
-    #client = get_svc_client(svc='s3control', client_config=Config(s3={'addressing_style': 'path'}))
+    # client = get_svc_client(svc='s3control', client_config=Config(s3={'addressing_style': 'path'}))
     bucket_name = get_new_bucket()
     client = get_client()
 
@@ -12485,8 +13224,9 @@ def test_get_default_public_block():
     assert resp['PublicAccessBlockConfiguration']['IgnorePublicAcls'] == False
     assert resp['PublicAccessBlockConfiguration']['RestrictPublicBuckets'] == False
 
+
 def test_put_public_block():
-    #client = get_svc_client(svc='s3control', client_config=Config(s3={'addressing_style': 'path'}))
+    # client = get_svc_client(svc='s3control', client_config=Config(s3={'addressing_style': 'path'}))
     bucket_name = get_new_bucket()
     client = get_client()
 
@@ -12505,7 +13245,7 @@ def test_put_public_block():
 
 
 def test_block_public_put_bucket_acls():
-    #client = get_svc_client(svc='s3control', client_config=Config(s3={'addressing_style': 'path'}))
+    # client = get_svc_client(svc='s3control', client_config=Config(s3={'addressing_style': 'path'}))
     bucket_name = get_new_bucket()
     client = get_client()
 
@@ -12520,15 +13260,15 @@ def test_block_public_put_bucket_acls():
     assert resp['PublicAccessBlockConfiguration']['BlockPublicAcls'] == access_conf['BlockPublicAcls']
     assert resp['PublicAccessBlockConfiguration']['BlockPublicPolicy'] == access_conf['BlockPublicPolicy']
 
-    e = assert_raises(ClientError, client.put_bucket_acl, Bucket=bucket_name,ACL='public-read')
+    e = assert_raises(ClientError, client.put_bucket_acl, Bucket=bucket_name, ACL='public-read')
     status, error_code = _get_status_and_error_code(e.response)
     assert status == 403
 
-    e = assert_raises(ClientError, client.put_bucket_acl, Bucket=bucket_name,ACL='public-read-write')
+    e = assert_raises(ClientError, client.put_bucket_acl, Bucket=bucket_name, ACL='public-read-write')
     status, error_code = _get_status_and_error_code(e.response)
     assert status == 403
 
-    e = assert_raises(ClientError, client.put_bucket_acl, Bucket=bucket_name,ACL='authenticated-read')
+    e = assert_raises(ClientError, client.put_bucket_acl, Bucket=bucket_name, ACL='authenticated-read')
     status, error_code = _get_status_and_error_code(e.response)
     assert status == 403
 
@@ -12548,7 +13288,7 @@ def test_block_public_object_canned_acls():
     # assert resp['PublicAccessBlockConfiguration']['BlockPublicAcls'] == access_conf['BlockPublicAcls']
     # assert resp['PublicAccessBlockConfiguration']['BlockPublicPolicy'] == access_conf['BlockPublicPolicy']
 
-    #FIXME: use empty body until #42208
+    # FIXME: use empty body until #42208
     e = assert_raises(ClientError, client.put_object, Bucket=bucket_name, Key='foo1', Body='', ACL='public-read')
     status, error_code = _get_status_and_error_code(e.response)
     assert status == 403
@@ -12588,8 +13328,8 @@ def test_ignore_public_acls():
     # Public bucket should be accessible
     alt_client.list_objects(Bucket=bucket_name)
 
-    client.put_object(Bucket=bucket_name,Key='key1',Body='abcde',ACL='public-read')
-    resp=alt_client.get_object(Bucket=bucket_name, Key='key1')
+    client.put_object(Bucket=bucket_name, Key='key1', Body='abcde', ACL='public-read')
+    resp = alt_client.get_object(Bucket=bucket_name, Key='key1')
     assert _get_body(resp) == 'abcde'
 
     access_conf = {'BlockPublicAcls': False,
@@ -12612,24 +13352,26 @@ def test_multipart_upload_on_a_bucket_with_policy():
     resource1 = "arn:aws:s3:::" + bucket_name
     resource2 = "arn:aws:s3:::" + bucket_name + "/*"
     policy_document = json.dumps(
-    {
-        "Version": "2012-10-17",
-        "Statement": [{
-        "Effect": "Allow",
-        "Principal": "*",
-        "Action": "*",
-        "Resource": [
-            resource1,
-            resource2
-          ],
-        }]
-     })
+        {
+            "Version": "2012-10-17",
+            "Statement": [{
+                "Effect": "Allow",
+                "Principal": "*",
+                "Action": "*",
+                "Resource": [
+                    resource1,
+                    resource2
+                ],
+            }]
+        })
     key = "foo"
-    objlen=50*1024*1024
+    objlen = 50 * 1024 * 1024
     client.put_bucket_policy(Bucket=bucket_name, Policy=policy_document)
     (upload_id, data, parts) = _multipart_upload(bucket_name=bucket_name, key=key, size=objlen, client=client)
-    response = client.complete_multipart_upload(Bucket=bucket_name, Key=key, UploadId=upload_id, MultipartUpload={'Parts': parts})
+    response = client.complete_multipart_upload(Bucket=bucket_name, Key=key, UploadId=upload_id,
+                                                MultipartUpload={'Parts': parts})
     assert response['ResponseMetadata']['HTTPStatusCode'] == 200
+
 
 def _put_bucket_encryption_s3(client, bucket_name):
     """
@@ -12644,8 +13386,10 @@ def _put_bucket_encryption_s3(client, bucket_name):
             },
         ]
     }
-    response = client.put_bucket_encryption(Bucket=bucket_name, ServerSideEncryptionConfiguration=server_side_encryption_conf)
+    response = client.put_bucket_encryption(Bucket=bucket_name,
+                                            ServerSideEncryptionConfiguration=server_side_encryption_conf)
     assert response['ResponseMetadata']['HTTPStatusCode'] == 200
+
 
 def _put_bucket_encryption_kms(client, bucket_name):
     """
@@ -12664,7 +13408,8 @@ def _put_bucket_encryption_kms(client, bucket_name):
             },
         ]
     }
-    response = client.put_bucket_encryption(Bucket=bucket_name, ServerSideEncryptionConfiguration=server_side_encryption_conf)
+    response = client.put_bucket_encryption(Bucket=bucket_name,
+                                            ServerSideEncryptionConfiguration=server_side_encryption_conf)
     assert response['ResponseMetadata']['HTTPStatusCode'] == 200
 
 
@@ -12673,6 +13418,7 @@ def test_put_bucket_encryption_s3():
     bucket_name = get_new_bucket()
     client = get_client()
     _put_bucket_encryption_s3(client, bucket_name)
+
 
 @pytest.mark.encryption
 def test_put_bucket_encryption_kms():
@@ -12698,7 +13444,8 @@ def test_get_bucket_encryption_s3():
 
     response = client.get_bucket_encryption(Bucket=bucket_name)
     assert response['ResponseMetadata']['HTTPStatusCode'] == 200
-    assert response['ServerSideEncryptionConfiguration']['Rules'][0]['ApplyServerSideEncryptionByDefault']['SSEAlgorithm'] == 'AES256'
+    assert response['ServerSideEncryptionConfiguration']['Rules'][0]['ApplyServerSideEncryptionByDefault'][
+               'SSEAlgorithm'] == 'AES256'
 
 
 @pytest.mark.encryption
@@ -12721,8 +13468,10 @@ def test_get_bucket_encryption_kms():
 
     response = client.get_bucket_encryption(Bucket=bucket_name)
     assert response['ResponseMetadata']['HTTPStatusCode'] == 200
-    assert response['ServerSideEncryptionConfiguration']['Rules'][0]['ApplyServerSideEncryptionByDefault']['SSEAlgorithm'] == 'aws:kms'
-    assert response['ServerSideEncryptionConfiguration']['Rules'][0]['ApplyServerSideEncryptionByDefault']['KMSMasterKeyID'] == kms_keyid
+    assert response['ServerSideEncryptionConfiguration']['Rules'][0]['ApplyServerSideEncryptionByDefault'][
+               'SSEAlgorithm'] == 'aws:kms'
+    assert response['ServerSideEncryptionConfiguration']['Rules'][0]['ApplyServerSideEncryptionByDefault'][
+               'KMSMasterKeyID'] == kms_keyid
 
 
 @pytest.mark.sse_s3
@@ -12768,6 +13517,7 @@ def test_delete_bucket_encryption_kms():
 
     assert response_code == 'ServerSideEncryptionConfigurationNotFoundError'
 
+
 def _test_sse_s3_default_upload(file_size):
     """
     Test enables bucket encryption.
@@ -12778,7 +13528,7 @@ def _test_sse_s3_default_upload(file_size):
     client = get_client()
     _put_bucket_encryption_s3(client, bucket_name)
 
-    data = 'A'*file_size
+    data = 'A' * file_size
     response = client.put_object(Bucket=bucket_name, Key='testobj', Body=data)
     assert response['ResponseMetadata']['HTTPHeaders']['x-amz-server-side-encryption'] == 'AES256'
 
@@ -12787,12 +13537,14 @@ def _test_sse_s3_default_upload(file_size):
     body = _get_body(response)
     assert body == data
 
+
 @pytest.mark.encryption
 @pytest.mark.bucket_encryption
 @pytest.mark.sse_s3
 @pytest.mark.fails_on_dbstore
 def test_sse_s3_default_upload_1b():
     _test_sse_s3_default_upload(1)
+
 
 @pytest.mark.encryption
 @pytest.mark.bucket_encryption
@@ -12801,19 +13553,22 @@ def test_sse_s3_default_upload_1b():
 def test_sse_s3_default_upload_1kb():
     _test_sse_s3_default_upload(1024)
 
+
 @pytest.mark.encryption
 @pytest.mark.bucket_encryption
 @pytest.mark.sse_s3
 @pytest.mark.fails_on_dbstore
 def test_sse_s3_default_upload_1mb():
-    _test_sse_s3_default_upload(1024*1024)
+    _test_sse_s3_default_upload(1024 * 1024)
+
 
 @pytest.mark.encryption
 @pytest.mark.bucket_encryption
 @pytest.mark.sse_s3
 @pytest.mark.fails_on_dbstore
 def test_sse_s3_default_upload_8mb():
-    _test_sse_s3_default_upload(8*1024*1024)
+    _test_sse_s3_default_upload(8 * 1024 * 1024)
+
 
 def _test_sse_kms_default_upload(file_size):
     """
@@ -12828,7 +13583,7 @@ def _test_sse_kms_default_upload(file_size):
     client = get_client()
     _put_bucket_encryption_kms(client, bucket_name)
 
-    data = 'A'*file_size
+    data = 'A' * file_size
     response = client.put_object(Bucket=bucket_name, Key='testobj', Body=data)
     assert response['ResponseMetadata']['HTTPHeaders']['x-amz-server-side-encryption'] == 'aws:kms'
     assert response['ResponseMetadata']['HTTPHeaders']['x-amz-server-side-encryption-aws-kms-key-id'] == kms_keyid
@@ -12839,12 +13594,14 @@ def _test_sse_kms_default_upload(file_size):
     body = _get_body(response)
     assert body == data
 
+
 @pytest.mark.encryption
 @pytest.mark.bucket_encryption
 @pytest.mark.sse_s3
 @pytest.mark.fails_on_dbstore
 def test_sse_kms_default_upload_1b():
     _test_sse_kms_default_upload(1)
+
 
 @pytest.mark.encryption
 @pytest.mark.bucket_encryption
@@ -12853,20 +13610,21 @@ def test_sse_kms_default_upload_1b():
 def test_sse_kms_default_upload_1kb():
     _test_sse_kms_default_upload(1024)
 
+
 @pytest.mark.encryption
 @pytest.mark.bucket_encryption
 @pytest.mark.sse_s3
 @pytest.mark.fails_on_dbstore
 def test_sse_kms_default_upload_1mb():
-    _test_sse_kms_default_upload(1024*1024)
+    _test_sse_kms_default_upload(1024 * 1024)
+
 
 @pytest.mark.encryption
 @pytest.mark.bucket_encryption
 @pytest.mark.sse_s3
 @pytest.mark.fails_on_dbstore
 def test_sse_kms_default_upload_8mb():
-    _test_sse_kms_default_upload(8*1024*1024)
-
+    _test_sse_kms_default_upload(8 * 1024 * 1024)
 
 
 @pytest.mark.encryption
@@ -12878,7 +13636,7 @@ def test_sse_s3_default_method_head():
     client = get_client()
     _put_bucket_encryption_s3(client, bucket_name)
 
-    data = 'A'*1000
+    data = 'A' * 1000
     key = 'testobj'
     client.put_object(Bucket=bucket_name, Key=key, Body=data)
 
@@ -12893,6 +13651,7 @@ def test_sse_s3_default_method_head():
     e = assert_raises(ClientError, client.head_object, Bucket=bucket_name, Key=key)
     status, error_code = _get_status_and_error_code(e.response)
     assert status == 400
+
 
 @pytest.mark.encryption
 @pytest.mark.bucket_encryption
@@ -12913,7 +13672,9 @@ def test_sse_s3_default_multipart_upload():
     resend_parts = []
 
     (upload_id, data, parts) = _multipart_upload_enc(client, bucket_name, key, objlen,
-            part_size=5*1024*1024, init_headers=enc_headers, part_headers=enc_headers, metadata=metadata, resend_parts=resend_parts)
+                                                     part_size=5 * 1024 * 1024, init_headers=enc_headers,
+                                                     part_headers=enc_headers, metadata=metadata,
+                                                     resend_parts=resend_parts)
 
     lf = (lambda **kwargs: kwargs['params']['headers'].update(enc_headers))
     client.meta.events.register('before-call.s3.CompleteMultipartUpload', lf)
@@ -12940,6 +13701,7 @@ def test_sse_s3_default_multipart_upload():
     _check_content_using_range(key, bucket_name, data, 1000000)
     _check_content_using_range(key, bucket_name, data, 10000000)
 
+
 @pytest.mark.encryption
 @pytest.mark.bucket_encryption
 @pytest.mark.sse_s3
@@ -12954,15 +13716,15 @@ def test_sse_s3_default_post_object_authenticated_request():
     expires = datetime.datetime.now(utc) + datetime.timedelta(seconds=+6000)
 
     policy_document = {
-            "expiration": expires.strftime("%Y-%m-%dT%H:%M:%SZ"),
-            "conditions": [
-                {"bucket": bucket_name},
-                ["starts-with", "$key", "foo"],
-                {"acl": "private"},
-                ["starts-with", "$Content-Type", "text/plain"],
-                ["starts-with", "$x-amz-server-side-encryption", ""], 
-                ["content-length-range", 0, 1024]
-            ]
+        "expiration": expires.strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "conditions": [
+            {"bucket": bucket_name},
+            ["starts-with", "$key", "foo"],
+            {"acl": "private"},
+            ["starts-with", "$Content-Type", "text/plain"],
+            ["starts-with", "$x-amz-server-side-encryption", ""],
+            ["content-length-range", 0, 1024]
+        ]
     }
 
     json_policy_document = json.JSONEncoder().encode(policy_document)
@@ -12973,18 +13735,19 @@ def test_sse_s3_default_post_object_authenticated_request():
 
     signature = base64.b64encode(hmac.new(bytes(aws_secret_access_key, 'utf-8'), policy, hashlib.sha1).digest())
 
-    payload = OrderedDict([ ("key" , "foo.txt"),("AWSAccessKeyId" , aws_access_key_id),\
-    ("acl" , "private"),("signature" , signature),("policy" , policy),\
-    ("Content-Type" , "text/plain"),
-    ('file', ('bar'))])
+    payload = OrderedDict([("key", "foo.txt"), ("AWSAccessKeyId", aws_access_key_id), \
+                           ("acl", "private"), ("signature", signature), ("policy", policy), \
+                           ("Content-Type", "text/plain"),
+                           ('file', ('bar'))])
 
-    r = requests.post(url, files = payload)
+    r = requests.post(url, files=payload)
     assert r.status_code == 204
 
     response = client.get_object(Bucket=bucket_name, Key='foo.txt')
     assert response['ResponseMetadata']['HTTPHeaders']['x-amz-server-side-encryption'] == 'AES256'
     body = _get_body(response)
     assert body == 'bar'
+
 
 @pytest.mark.encryption
 @pytest.mark.bucket_encryption
@@ -13002,15 +13765,15 @@ def test_sse_kms_default_post_object_authenticated_request():
     expires = datetime.datetime.now(utc) + datetime.timedelta(seconds=+6000)
 
     policy_document = {
-            "expiration": expires.strftime("%Y-%m-%dT%H:%M:%SZ"),
-            "conditions": [
-                {"bucket": bucket_name},
-                ["starts-with", "$key", "foo"],
-                {"acl": "private"},
-                ["starts-with", "$Content-Type", "text/plain"],
-                ["starts-with", "$x-amz-server-side-encryption", ""], 
-                ["content-length-range", 0, 1024]
-            ]
+        "expiration": expires.strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "conditions": [
+            {"bucket": bucket_name},
+            ["starts-with", "$key", "foo"],
+            {"acl": "private"},
+            ["starts-with", "$Content-Type", "text/plain"],
+            ["starts-with", "$x-amz-server-side-encryption", ""],
+            ["content-length-range", 0, 1024]
+        ]
     }
 
     json_policy_document = json.JSONEncoder().encode(policy_document)
@@ -13021,12 +13784,12 @@ def test_sse_kms_default_post_object_authenticated_request():
 
     signature = base64.b64encode(hmac.new(bytes(aws_secret_access_key, 'utf-8'), policy, hashlib.sha1).digest())
 
-    payload = OrderedDict([ ("key" , "foo.txt"),("AWSAccessKeyId" , aws_access_key_id),\
-    ("acl" , "private"),("signature" , signature),("policy" , policy),\
-    ("Content-Type" , "text/plain"),
-    ('file', ('bar'))])
+    payload = OrderedDict([("key", "foo.txt"), ("AWSAccessKeyId", aws_access_key_id), \
+                           ("acl", "private"), ("signature", signature), ("policy", policy), \
+                           ("Content-Type", "text/plain"),
+                           ('file', ('bar'))])
 
-    r = requests.post(url, files = payload)
+    r = requests.post(url, files=payload)
     assert r.status_code == 204
 
     response = client.get_object(Bucket=bucket_name, Key='foo.txt')
@@ -13043,7 +13806,7 @@ def _test_sse_s3_encrypted_upload(file_size):
     bucket_name = get_new_bucket()
     client = get_client()
 
-    data = 'A'*file_size
+    data = 'A' * file_size
     response = client.put_object(Bucket=bucket_name, Key='testobj', Body=data, ServerSideEncryption='AES256')
     assert response['ResponseMetadata']['HTTPHeaders']['x-amz-server-side-encryption'] == 'AES256'
 
@@ -13052,11 +13815,13 @@ def _test_sse_s3_encrypted_upload(file_size):
     body = _get_body(response)
     assert body == data
 
+
 @pytest.mark.encryption
 @pytest.mark.sse_s3
 @pytest.mark.fails_on_dbstore
 def test_sse_s3_encrypted_upload_1b():
     _test_sse_s3_encrypted_upload(1)
+
 
 @pytest.mark.encryption
 @pytest.mark.sse_s3
@@ -13064,17 +13829,20 @@ def test_sse_s3_encrypted_upload_1b():
 def test_sse_s3_encrypted_upload_1kb():
     _test_sse_s3_encrypted_upload(1024)
 
+
 @pytest.mark.encryption
 @pytest.mark.sse_s3
 @pytest.mark.fails_on_dbstore
 def test_sse_s3_encrypted_upload_1mb():
-    _test_sse_s3_encrypted_upload(1024*1024)
+    _test_sse_s3_encrypted_upload(1024 * 1024)
+
 
 @pytest.mark.encryption
 @pytest.mark.sse_s3
 @pytest.mark.fails_on_dbstore
 def test_sse_s3_encrypted_upload_8mb():
-    _test_sse_s3_encrypted_upload(8*1024*1024)
+    _test_sse_s3_encrypted_upload(8 * 1024 * 1024)
+
 
 def test_get_object_torrent():
     client = get_client()

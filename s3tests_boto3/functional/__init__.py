@@ -1,3 +1,4 @@
+import allure
 import pytest
 import boto3
 from botocore import UNSIGNED
@@ -581,6 +582,7 @@ def get_new_bucket_resource(name=None):
     bucket_location = bucket.create()
     return bucket
 
+@allure.step("Create bucket")
 def get_new_bucket(client=None, name=None):
     """
     Get a bucket that exists and is empty.
@@ -588,6 +590,8 @@ def get_new_bucket(client=None, name=None):
     Always recreates a bucket from scratch. This is useful to also
     reset ACLs and such.
     """
+
+
     if client is None:
         client = get_client()
     if name is None:
